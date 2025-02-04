@@ -1,7 +1,17 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
 node_modules/
+.pnp/
+.pnp.js
+
+# Testing
+coverage/
 
 # Expo
 .expo/
@@ -20,7 +30,7 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -29,8 +39,20 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Local development
+*.log
+logs
+*.log.*
 
-# typescript
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# TypeScript
 *.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.temp
