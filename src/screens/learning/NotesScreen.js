@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing } from '../styles/globalStyles';
+import { colors, spacing } from '../../styles/theme';
 
 const NotesScreen = () => {
   return (

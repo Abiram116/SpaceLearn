@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,9 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../styles/globalStyles';
-import { userService } from '../services/userService';
-import Button from '../components/Button';
+import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import { userService } from '../../services/userService';
+import Button from '../../components/common/Button';
 
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'male' },

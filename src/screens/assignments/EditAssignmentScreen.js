@@ -7,7 +7,7 @@ import {
   Text,
   ScrollView,
 } from 'react-native';
-import { colors, spacing } from '../styles/globalStyles';
+import { colors, spacing } from '../../styles/theme';
 
 const EditAssignmentScreen = ({ route, navigation }) => {
   const { assignmentId } = route.params;

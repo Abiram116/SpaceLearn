@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import ChatBubble from '../components/ChatBubble';
+import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import ChatBubble from '../../components/chat/ChatBubble';
 
 const SpaceScreen = ({ route }) => {
   const { subject } = route.params;
@@ -85,50 +86,50 @@ const SpaceScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
   },
   header: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+    padding: spacing.md,
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.border,
   },
   headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000000',
+    ...typography.h2,
+    color: colors.text,
   },
   messageList: {
-    padding: 16,
+    padding: spacing.md,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+    padding: spacing.md,
+    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: colors.border,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginRight: spacing.sm,
     maxHeight: 100,
+    color: colors.text,
   },
   sendButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    paddingHorizontal: 20,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#B0B0B0',
+    backgroundColor: colors.border,
   },
   sendButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: colors.background,
+    ...typography.button,
   },
 });
 

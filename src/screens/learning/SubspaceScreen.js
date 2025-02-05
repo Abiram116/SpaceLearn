@@ -12,9 +12,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../styles/globalStyles';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import Card from '../../components/common/Card';
+import Button from '../../components/common/Button';
 
 const SubspaceScreen = ({ route, navigation }) => {
   const { subspace, subject } = route.params;

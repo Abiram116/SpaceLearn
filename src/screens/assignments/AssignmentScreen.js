@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import AssignmentCard from '../components/AssignmentCard';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, shadows, borderRadius } from '../../styles/theme';
+import AssignmentCard from '../../components/learning/AssignmentCard';
 
 const assignments = [
   {
@@ -44,7 +45,7 @@ const AssignmentScreen = ({ navigation }) => {
         style={styles.fab}
         onPress={() => navigation.navigate('EditAssignment', { assignmentId: null })}
       >
-        <Ionicons name="add" size={24} color="#FFFFFF" />
+        <Ionicons name="add" size={24} color={colors.background} />
       </TouchableOpacity>
     </View>
   );
@@ -53,29 +54,22 @@ const AssignmentScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
   },
   list: {
-    padding: 16,
+    padding: spacing.lg,
   },
   fab: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
+    right: spacing.lg,
+    bottom: spacing.lg,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    ...shadows.medium,
   },
 });
 

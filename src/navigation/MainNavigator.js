@@ -54,21 +54,21 @@ const MainNavigator = () => {
         name="Subjects" 
         component={SubjectsScreen}
         options={{
-          title: 'Your Subjects',
+          title: 'Subjects',
         }}
       />
       <Tab.Screen 
         name="Notes" 
         component={NotesScreen}
         options={{
-          title: 'Your Notes',
+          title: 'Notes',
         }}
       />
       <Tab.Screen 
         name="Assignments" 
         component={AssignmentsScreen}
         options={{
-          title: 'Your Tasks',
+          title: 'Assignments',
         }}
       />
       <Tab.Screen 

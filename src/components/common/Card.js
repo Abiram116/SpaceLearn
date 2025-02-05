@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, shadows, borderRadius } from '../styles/globalStyles';
+import { colors, shadows, borderRadius } from '../../styles/theme';
 
 const Card = ({ children, onPress, style }) => {
   if (onPress) {

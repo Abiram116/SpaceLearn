@@ -2,19 +2,26 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/globalStyles';
+import { colors, typography } from '../styles/theme';
 
-import SplashScreen from '../screens/SplashScreen';
-import AuthScreen from '../screens/AuthScreen';
-import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
-import EditProfileScreen from '../screens/EditProfileScreen';
-import ChangePasswordScreen from '../screens/ChangePasswordScreen';
-import HomeScreen from '../screens/HomeScreen';
-import SubjectsScreen from '../screens/SubjectsScreen';
-import SubspaceScreen from '../screens/SubspaceScreen';
-import NotesScreen from '../screens/NotesScreen';
-import AssignmentsScreen from '../screens/AssignmentsScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+// Auth Screens
+import SplashScreen from '../screens/auth/SplashScreen';
+import AuthScreen from '../screens/auth/AuthScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ChangePasswordScreen from '../screens/auth/ChangePasswordScreen';
+
+// Main Screens
+import EditProfileScreen from '../screens/main/EditProfileScreen';
+import HomeScreen from '../screens/main/HomeScreen';
+import ProfileScreen from '../screens/main/ProfileScreen';
+
+// Learning Screens
+import SubjectsScreen from '../screens/learning/SubjectsScreen';
+import SubspaceScreen from '../screens/learning/SubspaceScreen';
+import NotesScreen from '../screens/learning/NotesScreen';
+
+// Assignment Screens
+import AssignmentsScreen from '../screens/assignments/AssignmentsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();

@@ -8,10 +8,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../styles/globalStyles';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { subjectService } from '../services/subjectService';
+import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import Card from '../../components/common/Card';
+import Button from '../../components/common/Button';
+import { subjectService } from '../../services/subjectService';
 
 const HomeScreen = ({ navigation }) => {
   const [recentActivities, setRecentActivities] = useState([]);

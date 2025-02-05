@@ -13,9 +13,9 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../styles/globalStyles';
-import { userService } from '../services/userService';
-import Button from '../components/Button';
+import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import { userService } from '../../services/userService';
+import Button from '../../components/common/Button';
 
 const EditProfileScreen = ({ route, navigation }) => {
   const { user, onUpdate } = route.params;

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { colors } from '../styles/globalStyles';
+import { colors } from '../../styles/theme';
 
 const SplashScreen = ({ navigation }) => {
   const fadeAnim = new Animated.Value(0);

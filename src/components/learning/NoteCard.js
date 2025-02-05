@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, shadows, borderRadius, typography, spacing } from '../../styles/theme';
 
 const NoteCard = ({ title, preview, date, onPress }) => {
   return (
@@ -17,35 +18,27 @@ const NoteCard = ({ title, preview, date, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    marginHorizontal: spacing.md,
+    ...shadows.small,
   },
   container: {
-    gap: 8,
+    gap: spacing.sm,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
+    ...typography.h3,
+    color: colors.text,
   },
   preview: {
-    fontSize: 14,
-    color: '#666666',
+    ...typography.body,
+    color: colors.textSecondary,
   },
   date: {
-    fontSize: 12,
-    color: '#999999',
+    ...typography.caption,
+    color: colors.textSecondary,
     alignSelf: 'flex-end',
   },
 });

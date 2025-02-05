@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { colors, spacing } from '../styles/globalStyles';
+import { colors, spacing } from '../../styles/theme';
 
 const EditNoteScreen = ({ route, navigation }) => {
   const { noteId } = route.params;

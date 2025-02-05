@@ -1,17 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, shadows, borderRadius, typography } from '../../styles/theme';
 
 const AssignmentCard = ({ title, dueDate, status, onPress }) => {
   const getStatusColor = () => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return '#4CAF50';
+        return colors.success;
       case 'pending':
-        return '#FFC107';
+        return colors.warning;
       case 'overdue':
-        return '#F44336';
+        return colors.error;
       default:
-        return '#999999';
+        return colors.textSecondary;
     }
   };
 
@@ -32,27 +33,19 @@ const AssignmentCard = ({ title, dueDate, status, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    marginHorizontal: spacing.md,
+    ...shadows.small,
   },
   container: {
-    gap: 12,
+    gap: spacing.sm,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
+    ...typography.h3,
+    color: colors.text,
   },
   details: {
     flexDirection: 'row',
@@ -60,17 +53,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dueDate: {
-    fontSize: 14,
-    color: '#666666',
+    ...typography.body,
+    color: colors.textSecondary,
   },
   status: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
   },
   statusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: colors.background,
+    ...typography.caption,
     fontWeight: '600',
   },
 });

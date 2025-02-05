@@ -20,7 +20,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Add error logging
 supabase.handleError = (error) => {
-  console.error('Supabase Error:', error);
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Supabase Error:', error);
+  } else {
+    console.error('An error occurred with the database connection');
+  }
   if (error.message) {
     return error.message;
   }
