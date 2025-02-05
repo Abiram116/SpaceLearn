@@ -4,27 +4,59 @@ SpaceLearn is a mobile learning platform that helps students manage their studie
 
 ## Features
 
-- 📚 Subject-based learning spaces
-- 🤖 AI-powered learning assistant
-- 📝 Note-taking and organization
+- 📚 Subject-based learning spaces with AI-powered tutoring
+- 🤖 Personalized learning assistant
+- 📝 Smart note-taking and organization
 - ✅ Assignment tracking and management
-- 📊 Progress tracking
-- 👤 User profiles and statistics
+- 📊 Progress tracking and learning analytics
+- 👤 User profiles with learning streaks
+
+## Project Structure
+
+```
+SpaceLearn/
+├── src/                      # Source code directory
+│   ├── api/                  # API integrations
+│   │   ├── supabase/        # Supabase backend
+│   │   └── deepSpeak/       # AI API integration
+│   ├── components/          # Reusable components
+│   │   ├── common/          # Basic UI components
+│   │   ├── chat/           # Chat components
+│   │   └── learning/       # Learning components
+│   ├── screens/            # App screens
+│   │   ├── auth/          # Authentication screens
+│   │   ├── main/          # Main app screens
+│   │   ├── learning/      # Learning screens
+│   │   └── assignments/   # Assignment screens
+│   ├── navigation/        # Navigation setup
+│   ├── services/         # Business logic
+│   ├── context/         # React Context
+│   ├── hooks/          # Custom hooks
+│   ├── utils/          # Utilities
+│   ├── styles/         # Global styles
+│   └── assets/         # Static assets
+├── config/             # Configuration
+├── docs/              # Documentation
+└── tests/             # Test files
+```
 
 ## Tech Stack
 
-- React Native with Expo
-- Supabase for backend and authentication
-- Custom AI integration (DeepSpeak API)
-- React Navigation for routing
-- AsyncStorage for local storage
+- **Frontend Framework**: React Native with Expo
+- **State Management**: React Context + Custom Hooks
+- **Backend & Auth**: Supabase
+- **AI Integration**: DeepSpeak API
+- **Navigation**: React Navigation 6
+- **Storage**: AsyncStorage
+- **Styling**: Custom theming system
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
 - npm or yarn
 - Expo CLI
-- iOS Simulator (for Mac) or Android Studio (for Android development)
+- Supabase account
+- DeepSpeak API key
 
 ## Installation
 
@@ -41,7 +73,8 @@ npm install
 yarn install
 ```
 
-3. Create a `.env` file in the root directory with your API keys:
+3. Set up environment variables:
+Create a `.env` file in the root directory:
 ```
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -56,36 +89,31 @@ npm start
 yarn start
 ```
 
-## Project Structure
+## Database Setup
 
-```
-SpaceLearn/
-├── .expo/               # Expo configuration
-├── assets/             # Static assets
-├── components/         # Reusable UI components
-├── screens/            # App screens
-├── navigation/         # Navigation setup
-├── services/          # API and backend services
-├── context/           # Global state management
-├── utils/             # Utility functions
-├── styles/            # Global styles
-└── App.js             # Main app entry point
-```
+1. Create a new Supabase project
+2. Run the initialization SQL script from `supabase/init.sql`
+3. Enable Row Level Security (RLS) policies
 
-## Components
+## Key Features Implementation
 
-- `ChatBubble`: Displays chat messages in the AI learning space
-- `NoteCard`: Displays note previews
-- `AssignmentCard`: Displays assignment information with status
+### Authentication
+- Complete user authentication flow
+- Password reset functionality
+- Session management
+- Protected routes
 
-## Screens
+### Learning System
+- AI-powered learning spaces
+- Subject and topic organization
+- Progress tracking
+- Learning analytics
 
-- `HomeScreen`: Dashboard with recent notes and assignments
-- `SubjectScreen`: List of subjects with progress
-- `SpaceScreen`: AI-powered learning space
-- `NotesScreen`: Note management
-- `AssignmentScreen`: Assignment tracking
-- `ProfileScreen`: User profile and settings
+### User Profile
+- Customizable user profiles
+- Learning streaks
+- Achievement system
+- Preferences management
 
 ## Contributing
 
@@ -95,12 +123,38 @@ SpaceLearn/
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## Code Style
+
+- Follow the ESLint configuration
+- Use TypeScript for type safety
+- Follow component organization guidelines
+- Write meaningful commit messages
+
+## Testing
+
+- Unit tests with Jest
+- Integration tests with React Native Testing Library
+- E2E tests with Detox
+
+## Deployment
+
+### iOS
+1. Configure app.json
+2. Build iOS bundle
+3. Submit to App Store
+
+### Android
+1. Configure app.json
+2. Build Android bundle
+3. Submit to Play Store
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
-- Thanks to the Expo team for the amazing framework
+- Thanks to the Expo team
 - Supabase for the backend infrastructure
-- All contributors who help improve the app 
+- DeepSpeak for AI capabilities
+- All contributors 
