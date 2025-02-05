@@ -160,6 +160,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Auth" component={AuthScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="App" component={MainApp} />
+      <Stack.Screen name="Subspace" component={SubspaceScreen} />
     </Stack.Navigator>
   );
 };

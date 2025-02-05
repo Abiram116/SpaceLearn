@@ -222,7 +222,7 @@ const SubjectsScreen = () => {
           ))}
           <View style={styles.addSubspaceContainer}>
             <TextInput
-              style={styles.subspaceInput}
+              style={[styles.subspaceInput, styles.focusedInput]}
               placeholder="New subspace name"
               value={newSubspaceName}
               onChangeText={setNewSubspaceName}
@@ -255,61 +255,60 @@ const SubjectsScreen = () => {
       style={styles.container}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <View style={styles.container}>
-          <View style={[styles.header, { paddingTop: insets.top }]}>
-            <Text style={styles.headerTitle}>Your Subjects</Text>
-            <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter new subject name"
-              value={newSubjectName}
-              onChangeText={setNewSubjectName}
-              onSubmitEditing={handleCreateSubject}
-              placeholderTextColor={colors.textSecondary}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-            <Button
-              title="Create"
-              onPress={handleCreateSubject}
-              disabled={!newSubjectName.trim() || loading}
-              loading={loading}
-              style={styles.createButton}
-            />
-          </View>
-
-          {subjects.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons 
-                name="library-outline" 
-                size={64} 
-                color={colors.primary} 
-                style={styles.emptyIcon} 
-              />
-              <Text style={styles.emptyText}>No subjects yet</Text>
-              <Text style={styles.emptySubtext}>
-                Create your first subject to get started!
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={subjects}
-              renderItem={renderSubject}
-              keyExtractor={item => item.id.toString()}
-              contentContainerStyle={styles.list}
-              showsVerticalScrollIndicator={false}
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-            />
-          )}
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <Text style={styles.headerTitle}>Your Subjects</Text>
+          <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
         </View>
-      </TouchableWithoutFeedback>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter new subject name"
+            value={newSubjectName}
+            onChangeText={setNewSubjectName}
+            onSubmitEditing={handleCreateSubject}
+            placeholderTextColor={colors.textSecondary}
+            returnKeyType="done"
+            blurOnSubmit={true}
+            autoFocus
+          />
+          <Button
+            title="Create"
+            onPress={handleCreateSubject}
+            disabled={!newSubjectName.trim() || loading}
+            loading={loading}
+            style={styles.createButton}
+          />
+        </View>
+
+        {subjects.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons 
+              name="library-outline" 
+              size={64} 
+              color={colors.primary} 
+              style={styles.emptyIcon} 
+            />
+            <Text style={styles.emptyText}>No subjects yet</Text>
+            <Text style={styles.emptySubtext}>
+              Create your first subject to get started!
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={subjects}
+            renderItem={renderSubject}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          />
+        )}
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -420,11 +419,16 @@ const styles = StyleSheet.create({
   subspaceInput: {
     flex: 1,
     ...typography.body,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    marginRight: spacing.sm,
     color: colors.text,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginRight: spacing.sm,
+    ...shadows.small,
+  },
+  focusedInput: {
+    borderColor: colors.primary,
+    borderWidth: 1,
   },
   emptyContainer: {
     flex: 1,

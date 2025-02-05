@@ -153,6 +153,7 @@ const SubspaceScreen = ({ route, navigation }) => {
             multiline
             maxLength={500}
             editable={!loading}
+            autoFocus
           />
           <TouchableOpacity
             style={[

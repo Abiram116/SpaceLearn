@@ -59,8 +59,7 @@ const HomeScreen = ({ navigation }) => {
       key={activity.id}
       style={styles.activityItem}
       onPress={() => navigation.navigate('Subspace', {
-        subspace: activity.subspace,
-        subject: activity.subject,
+        subspaceId: activity.subspace.id,
       })}
     >
       <View style={styles.activityIcon}>
