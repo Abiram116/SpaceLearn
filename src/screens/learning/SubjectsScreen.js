@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
@@ -20,6 +21,7 @@ import { subjectService } from '../../services/subjectService';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button as WebButton } from 'react-native';
 
 const SubjectsScreen = () => {
   const [subjects, setSubjects] = useState([]);
@@ -30,11 +32,24 @@ const SubjectsScreen = () => {
   const [newSubspaceName, setNewSubspaceName] = useState('');
   const [subspaces, setSubspaces] = useState({});
   const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const insets = useSafeAreaInsets();
+  const inputRef = useRef(null);
 
   useEffect(() => {
     loadSubjects();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
+    }
   }, []);
 
   const loadSubjects = async () => {
@@ -99,25 +114,35 @@ const SubjectsScreen = () => {
   };
 
   const handleDeleteSubject = async (id) => {
-    Alert.alert(
-      'Delete Subject',
-      'Are you sure you want to delete this subject? This will also delete all subspaces.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await subjectService.deleteSubject(id);
-              setSubjects(prev => prev.filter(s => s.id !== id));
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete subject');
-            }
-          }
+    setDeleteTarget({ type: 'subject', id });
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteSubspace = async (subjectId, subspaceId) => {
+    setDeleteTarget({ type: 'subspace', subjectId, subspaceId });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteTarget) {
+      try {
+        if (deleteTarget.type === 'subject') {
+          await subjectService.deleteSubject(deleteTarget.id);
+          setSubjects(prev => prev.filter(s => s.id !== deleteTarget.id));
+        } else if (deleteTarget.type === 'subspace') {
+          await subjectService.deleteSubspace(deleteTarget.subspaceId);
+          setSubspaces(prev => ({
+            ...prev,
+            [deleteTarget.subjectId]: prev[deleteTarget.subjectId].filter(s => s.id !== deleteTarget.subspaceId)
+          }));
         }
-      ]
-    );
+      } catch (error) {
+        Alert.alert('Error', 'Failed to delete.');
+      } finally {
+        setShowDeleteModal(false);
+        setDeleteTarget(null);
+      }
+    }
   };
 
   const handleCreateSubspace = async (subjectId) => {
@@ -134,36 +159,12 @@ const SubjectsScreen = () => {
     }
   };
 
-  const handleDeleteSubspace = async (subjectId, subspaceId) => {
-    Alert.alert(
-      'Delete Subspace',
-      'Are you sure you want to delete this subspace?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await subjectService.deleteSubspace(subspaceId);
-              setSubspaces(prev => ({
-                ...prev,
-                [subjectId]: prev[subjectId].filter(s => s.id !== subspaceId)
-              }));
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete subspace');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const renderSubject = ({ item }) => (
     <Card style={styles.subjectCard}>
       <View style={styles.subjectHeader}>
         {editingSubject?.id === item.id ? (
           <TextInput
+            ref={inputRef}
             style={styles.editInput}
             value={editingSubject.name}
             onChangeText={(text) => setEditingSubject({ ...editingSubject, name: text })}
@@ -263,6 +264,7 @@ const SubjectsScreen = () => {
 
         <View style={styles.inputContainer}>
           <TextInput
+            ref={inputRef}
             style={styles.input}
             placeholder="Enter new subject name"
             value={newSubjectName}
@@ -271,7 +273,6 @@ const SubjectsScreen = () => {
             placeholderTextColor={colors.textSecondary}
             returnKeyType="done"
             blurOnSubmit={true}
-            autoFocus
           />
           <Button
             title="Create"
@@ -309,6 +310,24 @@ const SubjectsScreen = () => {
           />
         )}
       </View>
+
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirm Deletion</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
+            <View style={styles.modalButtons}>
+              <WebButton title="Cancel" onPress={() => setShowDeleteModal(false)} />
+              <WebButton title="Delete" onPress={confirmDelete} color="red" />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -451,6 +470,33 @@ const styles = StyleSheet.create({
   },
   createButton: {
     minWidth: 100,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    width: '80%',
+    maxWidth: 300,
+  },
+  modalTitle: {
+    ...typography.h2,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    ...typography.body,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });
 
