@@ -18,26 +18,27 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Add error logging
-supabase.handleError = (error) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Supabase Error:', error);
-  } else {
-    console.error('An error occurred with the database connection');
-  }
+// Handle Supabase errors
+export const handleError = (error) => {
   if (error.message) {
     return error.message;
+  }
+  if (error.error_description) {
+    return error.error_description;
   }
   return 'An unexpected error occurred';
 };
 
-// Add response handling
-supabase.handleResponse = (response) => {
+// Handle Supabase responses
+export const handleResponse = (response) => {
   if (response.error) {
-    throw new Error(supabase.handleError(response.error));
+    throw new Error(handleError(response.error));
   }
   return response.data;
 };
+
+// Attach handleResponse to supabase instance for convenience
+supabase.handleResponse = handleResponse;
 
 export const getCurrentUser = async () => {
   try {

@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, handleResponse } from '../api/supabase/client';
 
 export const userService = {
   // Sign up a new user
@@ -25,7 +25,7 @@ export const userService = {
         .select()
         .single();
 
-      return supabase.handleResponse(response);
+      return handleResponse(response);
     } catch (error) {
       console.error('Error in signUp:', error);
       throw error;
@@ -74,7 +74,7 @@ export const userService = {
         .eq('id', user.id)
         .single();
 
-      return supabase.handleResponse(response);
+      return handleResponse(response);
     } catch (error) {
       console.error('Error in getCurrentUser:', error);
       throw error;
@@ -91,7 +91,7 @@ export const userService = {
         .select()
         .single();
 
-      return supabase.handleResponse(response);
+      return handleResponse(response);
     } catch (error) {
       console.error('Error in updateProfile:', error);
       throw error;
@@ -110,7 +110,7 @@ export const userService = {
         .select()
         .single();
 
-      return supabase.handleResponse(response);
+      return handleResponse(response);
     } catch (error) {
       console.error('Error in updatePreferences:', error);
       throw error;
@@ -126,7 +126,7 @@ export const userService = {
         .eq('id', userId)
         .single();
 
-      return supabase.handleResponse(response);
+      return handleResponse(response);
     } catch (error) {
       console.error('Error in getUserStreak:', error);
       throw error;

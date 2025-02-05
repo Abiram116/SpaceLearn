@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, handleResponse } from '../api/supabase/client';
 
 export const subjectService = {
   // Get all subjects for the current user
@@ -8,7 +8,7 @@ export const subjectService = {
       .select('*')
       .order('created_at', { ascending: false });
     
-    return supabase.handleResponse(response);
+    return handleResponse(response);
   },
 
   // Create a new subject
