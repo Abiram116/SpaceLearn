@@ -40,8 +40,13 @@ export const userService = {
         password,
       });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: 'Incorrect email or password. Please try again.' };
+        }
+        throw error;
+      }
+      return { data };
     } catch (error) {
       console.error('Error in signIn:', error);
       throw error;

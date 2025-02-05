@@ -38,10 +38,12 @@ const AuthScreen = ({ navigation }) => {
     age: '',
     grade: '',
   });
+  const [error, setError] = useState('');
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      setError('');
 
       if (isLogin) {
         const { email, password } = formData;
@@ -50,7 +52,16 @@ const AuthScreen = ({ navigation }) => {
           return;
         }
 
-        await userService.signIn(email, password);
+        const { data, error } = await userService.signIn(email, password);
+        if (error) {
+          setError(error);
+          return;
+        }
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'App' }],
+        });
       } else {
         const {
           email,
@@ -91,15 +102,15 @@ const AuthScreen = ({ navigation }) => {
           age: ageNum,
           grade,
         });
-      }
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'App' }],
-      });
-    } catch (error) {
-      console.error('Auth error:', error);
-      Alert.alert('Error', error.message || 'Authentication failed');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'App' }],
+        });
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -181,6 +192,7 @@ const AuthScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.form}>
+          {error && <Text style={styles.errorText}>{error}</Text>}
           {!isLogin && (
             <>
               <View style={styles.inputContainer}>
@@ -253,7 +265,7 @@ const AuthScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Ionicons name="mail" size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, error ? styles.inputError : null]}
               placeholder="Email"
               placeholderTextColor={colors.textSecondary}
               value={formData.email}
@@ -266,7 +278,7 @@ const AuthScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, error ? styles.inputError : null]}
               placeholder="Password"
               placeholderTextColor={colors.textSecondary}
               value={formData.password}
@@ -279,7 +291,7 @@ const AuthScreen = ({ navigation }) => {
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, error ? styles.inputError : null]}
                 placeholder="Confirm Password"
                 placeholderTextColor={colors.textSecondary}
                 value={formData.confirmPassword}
@@ -425,6 +437,15 @@ const styles = StyleSheet.create({
   },
   genderOptionTextSelected: {
     color: colors.background,
+  },
+  errorText: {
+    color: colors.error,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  inputError: {
+    borderColor: colors.error,
+    borderWidth: 1,
   },
 });
 

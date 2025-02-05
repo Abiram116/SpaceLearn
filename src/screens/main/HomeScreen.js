@@ -12,6 +12,7 @@ import { colors, spacing, typography, shadows, borderRadius } from '../../styles
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { subjectService } from '../../services/subjectService';
+import { userService } from '../../services/userService';
 
 const HomeScreen = ({ navigation }) => {
   const [recentActivities, setRecentActivities] = useState([]);
@@ -25,8 +26,15 @@ const HomeScreen = ({ navigation }) => {
 
   const loadUserData = async () => {
     try {
-      // TODO: Replace with actual API calls once user system is implemented
-      setUserStreak(3); // Placeholder
+      // Get current user
+      const currentUser = await userService.getCurrentUser();
+      if (!currentUser) return;
+
+      // Get user streak
+      const streakData = await userService.getUserStreak(currentUser.id);
+      setUserStreak(streakData?.streak_count || 0);
+
+      // Get recent activities
       const activities = await subjectService.getRecentActivities();
       setRecentActivities(activities || []);
     } catch (error) {
