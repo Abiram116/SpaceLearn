@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
@@ -18,19 +20,30 @@ const HomeScreen = ({ navigation }) => {
   const [recentActivities, setRecentActivities] = useState([]);
   const [userStreak, setUserStreak] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
 
   useEffect(() => {
     loadUserData();
   }, []);
 
+  // Add focus listener to update streak when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   const loadUserData = async () => {
     try {
+      setLoading(true);
       // Get current user
       const currentUser = await userService.getCurrentUser();
       if (!currentUser) return;
 
-      // Get user streak
+      // Get user streak - this will now automatically update if it's a new day
       const streakData = await userService.getUserStreak(currentUser.id);
       setUserStreak(streakData?.streak_count || 0);
 
@@ -41,7 +54,13 @@ const HomeScreen = ({ navigation }) => {
       console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadUserData();
   };
 
   const renderFeatureCard = (icon, title, description, onPress) => (
@@ -74,7 +93,18 @@ const HomeScreen = ({ navigation }) => {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+    >
       <View style={styles.header}>
         <View>
           <Text style={styles.welcomeText}>Welcome to</Text>
@@ -83,8 +113,14 @@ const HomeScreen = ({ navigation }) => {
         </View>
         <View style={styles.streakContainer}>
           <Ionicons name="flame" size={24} color={colors.background} />
-          <Text style={styles.streakCount}>{userStreak}</Text>
-          <Text style={styles.streakLabel}>Day Streak</Text>
+          {loading ? (
+            <ActivityIndicator color={colors.background} size="small" />
+          ) : (
+            <>
+              <Text style={styles.streakCount}>{userStreak}</Text>
+              <Text style={styles.streakLabel}>Day Streak</Text>
+            </>
+          )}
         </View>
       </View>
 

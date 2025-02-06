@@ -1,5 +1,45 @@
 import { supabase, handleResponse } from '../api/supabase/client';
 
+const isNewDay = (lastDate) => {
+  if (!lastDate) return true;
+  
+  // Convert dates to user's local timezone
+  const last = new Date(lastDate);
+  const now = new Date();
+  
+  // Get dates in user's timezone
+  const lastLocal = new Date(last.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+  const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+  
+  // Compare just the dates (year, month, day)
+  return lastLocal.getFullYear() < nowLocal.getFullYear() ||
+         lastLocal.getMonth() < nowLocal.getMonth() ||
+         lastLocal.getDate() < nowLocal.getDate();
+};
+
+const isConsecutiveDay = (lastDate) => {
+  if (!lastDate) return false;
+  
+  // Convert dates to user's local timezone
+  const last = new Date(lastDate);
+  const now = new Date();
+  
+  // Get dates in user's timezone
+  const lastLocal = new Date(last.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+  const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+  
+  // Reset hours to start of day in local time
+  lastLocal.setHours(0, 0, 0, 0);
+  nowLocal.setHours(0, 0, 0, 0);
+  
+  // Calculate the difference in days
+  const diffTime = nowLocal.getTime() - lastLocal.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Return true if it's exactly one day difference
+  return diffDays === 1;
+};
+
 export const userService = {
   // Sign up a new user
   signUp: async (userData) => {
@@ -131,9 +171,67 @@ export const userService = {
         .eq('id', userId)
         .single();
 
-      return handleResponse(response);
+      if (response.error) throw response.error;
+
+      const { streak_count, last_activity_date } = response.data;
+      
+      // Update streak if needed
+      await userService.updateStreak(userId, streak_count, last_activity_date);
+
+      // Get updated streak
+      const updatedResponse = await supabase
+        .from('users')
+        .select('streak_count, last_activity_date')
+        .eq('id', userId)
+        .single();
+
+      return handleResponse(updatedResponse);
     } catch (error) {
       console.error('Error in getUserStreak:', error);
+      throw error;
+    }
+  },
+
+  // Update streak
+  updateStreak: async (userId, currentStreak = 0, lastActivityDate = null) => {
+    try {
+      // Get current time in user's timezone
+      const now = new Date();
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+      
+      let newStreak = currentStreak;
+
+      // If it's a new day in user's timezone
+      if (isNewDay(lastActivityDate)) {
+        if (!lastActivityDate) {
+          // First time user starts with 1
+          newStreak = 1;
+        } else if (isConsecutiveDay(lastActivityDate)) {
+          // Increment streak for consecutive days
+          newStreak += 1;
+        } else {
+          // Reset streak to 0 if chain is broken (missed a day)
+          newStreak = 0;
+        }
+
+        // Update the streak and last activity date
+        const response = await supabase
+          .from('users')
+          .update({
+            streak_count: newStreak,
+            last_activity_date: nowLocal.toISOString(),
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+        return handleResponse(response);
+      }
+
+      return { streak_count: currentStreak, last_activity_date: lastActivityDate };
+    } catch (error) {
+      console.error('Error in updateStreak:', error);
       throw error;
     }
   },
