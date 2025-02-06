@@ -17,6 +17,51 @@ import { colors, spacing, typography, shadows, borderRadius } from '../../styles
 import { userService } from '../../services/userService';
 import Button from '../../components/common/Button';
 
+// Add web-specific styles
+if (Platform.OS === 'web') {
+  const style = document.createElement('style');
+  style.textContent = `
+    * {
+      -webkit-tap-highlight-color: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    input, textarea, select, button {
+      outline: none !important;
+      border: none !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+    }
+    
+    input:focus, textarea:focus, select:focus, button:focus {
+      outline: none !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+    }
+    
+    input:hover, textarea:hover, select:hover, button:hover {
+      outline: none !important;
+    }
+
+    input::selection {
+      background-color: transparent !important;
+    }
+
+    input::-moz-selection {
+      background-color: transparent !important;
+    }
+
+    *:focus {
+      outline: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'male' },
   { label: 'Female', value: 'female' },
@@ -467,6 +512,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
     ...shadows.small,
+    outline: 'none',
+    '&:focus-within': {
+      borderColor: colors.primary,
+      borderWidth: 1,
+    },
   },
   input: {
     flex: 1,
@@ -474,6 +524,18 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingVertical: spacing.md,
     marginLeft: spacing.sm,
+    outline: 'none',
+    border: 'none',
+    backgroundColor: 'transparent',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    appearance: 'none',
+    '&:focus': {
+      outline: 'none',
+    },
+    '&::placeholder': {
+      color: colors.textSecondary,
+    },
   },
   placeholderText: {
     color: colors.textSecondary,

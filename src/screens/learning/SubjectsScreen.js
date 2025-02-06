@@ -125,22 +125,37 @@ const SubjectsScreen = () => {
 
   const confirmDelete = async () => {
     if (deleteTarget) {
+      // Immediately hide modal
+      setShowDeleteModal(false);
+      
+      // Optimistically update UI
+      if (deleteTarget.type === 'subject') {
+        setSubjects(prev => prev.filter(s => s.id !== deleteTarget.id));
+      } else if (deleteTarget.type === 'subspace') {
+        setSubspaces(prev => ({
+          ...prev,
+          [deleteTarget.subjectId]: prev[deleteTarget.subjectId].filter(s => s.id !== deleteTarget.subspaceId)
+        }));
+      }
+
+      // Clear delete target
+      setDeleteTarget(null);
+
+      // Handle API call in background
       try {
         if (deleteTarget.type === 'subject') {
           await subjectService.deleteSubject(deleteTarget.id);
-          setSubjects(prev => prev.filter(s => s.id !== deleteTarget.id));
         } else if (deleteTarget.type === 'subspace') {
           await subjectService.deleteSubspace(deleteTarget.subspaceId);
-          setSubspaces(prev => ({
-            ...prev,
-            [deleteTarget.subjectId]: prev[deleteTarget.subjectId].filter(s => s.id !== deleteTarget.subspaceId)
-          }));
         }
       } catch (error) {
-        Alert.alert('Error', 'Failed to delete.');
-      } finally {
-        setShowDeleteModal(false);
-        setDeleteTarget(null);
+        // If API call fails, show error and revert the change
+        Alert.alert('Error', 'Failed to delete. Please try again.');
+        if (deleteTarget.type === 'subject') {
+          loadSubjects(); // Reload the full list to revert changes
+        } else {
+          loadSubspaces(deleteTarget.subjectId); // Reload just the affected subspace
+        }
       }
     }
   };
@@ -314,7 +329,7 @@ const SubjectsScreen = () => {
       <Modal
         visible={showDeleteModal}
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => setShowDeleteModal(false)}
       >
         <View style={styles.modalOverlay}>
@@ -322,8 +337,18 @@ const SubjectsScreen = () => {
             <Text style={styles.modalTitle}>Confirm Deletion</Text>
             <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
             <View style={styles.modalButtons}>
-              <WebButton title="Cancel" onPress={() => setShowDeleteModal(false)} />
-              <WebButton title="Delete" onPress={confirmDelete} color="red" />
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.deleteButton]} 
+                onPress={confirmDelete}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -473,30 +498,62 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   modalContent: {
-    backgroundColor: colors.background,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.card,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
     width: '80%',
     maxWidth: 300,
+    ...shadows.large,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalTitle: {
-    ...typography.h2,
+    ...typography.h3,
     color: colors.text,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   modalMessage: {
     ...typography.body,
-    color: colors.text,
-    marginBottom: spacing.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  deleteButton: {
+    backgroundColor: colors.error,
+  },
+  cancelButtonText: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  deleteButtonText: {
+    ...typography.body,
+    color: colors.background,
+    fontWeight: '600',
   },
 });
 
