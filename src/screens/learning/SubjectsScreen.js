@@ -23,7 +23,7 @@ import Button from '../../components/common/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button as WebButton } from 'react-native';
 
-const SubjectsScreen = () => {
+const SubjectsScreen = ({ navigation }) => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -37,6 +37,7 @@ const SubjectsScreen = () => {
 
   const insets = useSafeAreaInsets();
   const inputRef = useRef(null);
+  const subspaceInputRef = useRef(null);
 
   useEffect(() => {
     loadSubjects();
@@ -169,9 +170,22 @@ const SubjectsScreen = () => {
         [subjectId]: [...(prev[subjectId] || []), subspace]
       }));
       setNewSubspaceName('');
+      setTimeout(() => {
+        if (subspaceInputRef.current) {
+          subspaceInputRef.current.focus();
+        }
+      }, 100);
     } catch (error) {
       Alert.alert('Error', 'Failed to create subspace');
     }
+  };
+
+  const handleSubspacePress = (subspace, subject) => {
+    navigation.navigate('Subspace', {
+      subspaceId: subspace.id,
+      subspaceName: subspace.name,
+      subjectName: subject.name
+    });
   };
 
   const renderSubject = ({ item }) => (
@@ -223,27 +237,38 @@ const SubjectsScreen = () => {
       {expandedSubject === item.id && (
         <View style={styles.subspacesContainer}>
           {subspaces[item.id]?.map(subspace => (
-            <View key={subspace.id} style={styles.subspaceItem}>
+            <TouchableOpacity
+              key={subspace.id}
+              style={styles.subspaceItem}
+              onPress={() => handleSubspacePress(subspace, item)}
+              activeOpacity={0.7}
+            >
               <View style={styles.subspaceContent}>
                 <Ionicons name="bookmark-outline" size={16} color={colors.primary} />
                 <Text style={styles.subspaceName}>{subspace.name}</Text>
               </View>
               <TouchableOpacity
-                onPress={() => handleDeleteSubspace(item.id, subspace.id)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleDeleteSubspace(item.id, subspace.id);
+                }}
                 style={styles.actionButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Ionicons name="close-circle" size={20} color={colors.error} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ))}
           <View style={styles.addSubspaceContainer}>
             <TextInput
+              ref={subspaceInputRef}
               style={[styles.subspaceInput, styles.focusedInput]}
               placeholder="New subspace name"
               value={newSubspaceName}
               onChangeText={setNewSubspaceName}
               onSubmitEditing={() => handleCreateSubspace(item.id)}
               placeholderTextColor={colors.textSecondary}
+              returnKeyType="done"
             />
             <Button
               title="Add"

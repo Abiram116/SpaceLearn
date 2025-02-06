@@ -1,8 +1,8 @@
-const API_URL = process.env.EXPO_PUBLIC_DEEPSPEAK_API_URL;
-const API_KEY = process.env.EXPO_PUBLIC_DEEPSPEAK_API_KEY;
+const API_URL = process.env.EXPO_PUBLIC_DEEPSEEK_API_URL;
+const API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY;
 
 if (!API_URL || !API_KEY) {
-  console.error('Missing DeepSpeak API configuration');
+  console.error('Missing DeepSeek API configuration');
 }
 
 export const generateResponse = async (prompt, subject) => {
@@ -27,7 +27,7 @@ export const generateResponse = async (prompt, subject) => {
     const data = await response.json();
     return data.response;
   } catch (error) {
-    console.error('Error calling DeepSpeak API:', error.message);
+    console.error('Error calling DeepSeek API:', error.message);
     throw error;
   }
 };
