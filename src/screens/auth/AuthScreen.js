@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
 import { userService } from '../../services/userService';
 import Button from '../../components/common/Button';
+import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
+import { Input } from '../../components/common/Input';
 
 // Add web-specific styles
 if (Platform.OS === 'web') {
@@ -247,253 +249,214 @@ const AuthScreen = ({ navigation }) => {
   );
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.container, { backgroundColor: colors.background }]}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        enabled
+    <KeyboardAwareView keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bounces={false}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { flexGrow: 1, justifyContent: 'space-between' }
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          bounces={false}
-        >
-          <View>
-            <View style={styles.header}>
-              <Ionicons name="school" size={60} color={colors.primary} />
-              <Text style={styles.title}>Space Learn</Text>
-              <Text style={styles.subtitle}>
-                {isLogin ? 'Welcome back!' : 'Create your account'}
-              </Text>
-            </View>
+        <View>
+          <View style={styles.header}>
+            <Ionicons name="school" size={60} color={colors.primary} />
+            <Text style={styles.title}>Space Learn</Text>
+            <Text style={styles.subtitle}>
+              {isLogin ? 'Welcome back!' : 'Create your account'}
+            </Text>
+          </View>
 
-            <View style={styles.inputSection}>
-              {error && <Text style={styles.errorText}>{error}</Text>}
-              {!isLogin && (
-                <>
-                  <View style={styles.inputContainer}>
-                    <Ionicons name="person" size={20} color={colors.textSecondary} />
-                    <TextInput
-                      ref={emailRef}
-                      style={styles.input}
-                      placeholder="Full Name"
-                      placeholderTextColor={colors.textSecondary}
-                      value={formData.fullName}
-                      onChangeText={(text) => setFormData({ ...formData, fullName: text })}
-                      autoCapitalize="words"
-                      returnKeyType="next"
-                      onSubmitEditing={() => usernameRef?.current?.focus()}
-                      blurOnSubmit={false}
-                    />
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Ionicons name="at" size={20} color={colors.textSecondary} />
-                    <TextInput
-                      ref={usernameRef}
-                      style={styles.input}
-                      placeholder="Username"
-                      placeholderTextColor={colors.textSecondary}
-                      value={formData.username}
-                      onChangeText={(text) => setFormData({ ...formData, username: text })}
-                      autoCapitalize="none"
-                      returnKeyType="next"
-                      onSubmitEditing={() => handleGenderPress()}
-                      blurOnSubmit={false}
-                    />
-                  </View>
-
-                  <View style={styles.dropdownContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.inputContainer,
-                        showGenderPicker && {
-                          borderBottomLeftRadius: 0,
-                          borderBottomRightRadius: 0,
-                          borderBottomWidth: 0,
-                          borderBottomColor: 'transparent',
-                          marginBottom: 0,
-                        }
-                      ]}
-                      onPress={() => setShowGenderPicker(!showGenderPicker)}
-                    >
-                      <Ionicons name="male-female" size={20} color={colors.textSecondary} />
-                      <Text
-                        style={[
-                          styles.input,
-                          !formData.gender && styles.placeholderText,
-                        ]}
-                      >
-                        {formData.gender
-                          ? GENDER_OPTIONS.find(option => option.value === formData.gender)?.label
-                          : 'Select Gender'}
-                      </Text>
-                      <Ionicons 
-                        name={showGenderPicker ? "chevron-up" : "chevron-down"} 
-                        size={20} 
-                        color={colors.textSecondary} 
-                      />
-                    </TouchableOpacity>
-                    {showGenderPicker && (
-                      <View style={styles.dropdownList}>
-                        {GENDER_OPTIONS.map((option, index) => (
-                          <TouchableOpacity
-                            key={option.value}
-                            style={[
-                              styles.genderOption,
-                              formData.gender === option.value && styles.genderOptionSelected,
-                              index === GENDER_OPTIONS.length - 1 && styles.lastOption
-                            ]}
-                            onPress={() => {
-                              setFormData({ ...formData, gender: option.value });
-                              setShowGenderPicker(false);
-                            }}
-                          >
-                            <Text
-                              style={[
-                                styles.genderOptionText,
-                                formData.gender === option.value && styles.genderOptionTextSelected,
-                              ]}
-                            >
-                              {option.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Ionicons name="calendar" size={20} color={colors.textSecondary} />
-                    <TextInput
-                      ref={ageRef}
-                      style={styles.input}
-                      placeholder="Age"
-                      placeholderTextColor={colors.textSecondary}
-                      value={formData.age}
-                      onChangeText={(text) => setFormData({ ...formData, age: text })}
-                      keyboardType="number-pad"
-                      returnKeyType="next"
-                      onSubmitEditing={() => gradeRef?.current?.focus()}
-                      blurOnSubmit={false}
-                    />
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Ionicons name="school" size={20} color={colors.textSecondary} />
-                    <TextInput
-                      ref={gradeRef}
-                      style={styles.input}
-                      placeholder="Grade/Year"
-                      placeholderTextColor={colors.textSecondary}
-                      value={formData.grade}
-                      onChangeText={(text) => setFormData({ ...formData, grade: text })}
-                      returnKeyType="next"
-                      onSubmitEditing={() => emailRef?.current?.focus()}
-                      blurOnSubmit={false}
-                    />
-                  </View>
-                </>
-              )}
-
-              <View style={styles.inputContainer}>
-                <Ionicons name="mail" size={20} color={colors.textSecondary} />
-                <TextInput
+          <View style={styles.inputSection}>
+            {error && <Text style={styles.errorText}>{error}</Text>}
+            {!isLogin && (
+              <>
+                <Input
                   ref={emailRef}
-                  style={[styles.input, error ? styles.inputError : null]}
-                  placeholder="Email"
-                  placeholderTextColor={colors.textSecondary}
-                  value={formData.email}
-                  onChangeText={(text) => setFormData({ ...formData, email: text })}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
+                  icon="person"
+                  placeholder="Full Name"
+                  value={formData.fullName}
+                  onChangeText={(text) => setFormData({ ...formData, fullName: text })}
+                  autoCapitalize="words"
                   returnKeyType="next"
-                  onSubmitEditing={() => passwordRef?.current?.focus()}
+                  onSubmitEditing={() => usernameRef?.current?.focus()}
                   blurOnSubmit={false}
                 />
-              </View>
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
-                <TextInput
-                  ref={passwordRef}
-                  style={[styles.input, error ? styles.inputError : null]}
-                  placeholder="Password"
-                  placeholderTextColor={colors.textSecondary}
-                  value={formData.password}
-                  onChangeText={(text) => setFormData({ ...formData, password: text })}
-                  secureTextEntry
-                  returnKeyType={isLogin ? "go" : "next"}
-                  onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
-                  blurOnSubmit={isLogin}
+                <Input
+                  ref={usernameRef}
+                  icon="at"
+                  placeholder="Username"
+                  value={formData.username}
+                  onChangeText={(text) => setFormData({ ...formData, username: text })}
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                  onSubmitEditing={() => handleGenderPress()}
+                  blurOnSubmit={false}
                 />
-              </View>
 
-              {!isLogin && (
-                <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
-                  <TextInput
-                    ref={confirmPasswordRef}
-                    style={[styles.input, error ? styles.inputError : null]}
-                    placeholder="Confirm Password"
-                    placeholderTextColor={colors.textSecondary}
-                    value={formData.confirmPassword}
-                    onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-                    secureTextEntry
-                    returnKeyType="go"
-                    onSubmitEditing={handleSubmit}
-                  />
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.inputContainer,
+                      showGenderPicker && {
+                        borderBottomLeftRadius: 0,
+                        borderBottomRightRadius: 0,
+                        borderBottomWidth: 0,
+                        borderBottomColor: 'transparent',
+                        marginBottom: 0,
+                      }
+                    ]}
+                    onPress={() => setShowGenderPicker(!showGenderPicker)}
+                  >
+                    <Ionicons name="male-female" size={20} color={colors.textSecondary} />
+                    <Text
+                      style={[
+                        styles.input,
+                        !formData.gender && styles.placeholderText,
+                      ]}
+                    >
+                      {formData.gender
+                        ? GENDER_OPTIONS.find(option => option.value === formData.gender)?.label
+                        : 'Select Gender'}
+                    </Text>
+                    <Ionicons 
+                      name={showGenderPicker ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color={colors.textSecondary} 
+                    />
+                  </TouchableOpacity>
+                  {showGenderPicker && (
+                    <View style={styles.dropdownList}>
+                      {GENDER_OPTIONS.map((option, index) => (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={[
+                            styles.genderOption,
+                            formData.gender === option.value && styles.genderOptionSelected,
+                            index === GENDER_OPTIONS.length - 1 && styles.lastOption
+                          ]}
+                          onPress={() => {
+                            setFormData({ ...formData, gender: option.value });
+                            setShowGenderPicker(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.genderOptionText,
+                              formData.gender === option.value && styles.genderOptionTextSelected,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          </View>
 
-          <View style={styles.buttonSection}>
-            <Button
-              title={loading ? '' : (isLogin ? 'Sign In' : 'Sign Up')}
-              onPress={handleSubmit}
-              disabled={loading}
-              style={styles.submitButton}
-            >
-              {loading && <ActivityIndicator color={colors.background} />}
-            </Button>
+                <Input
+                  ref={ageRef}
+                  icon="calendar"
+                  placeholder="Age"
+                  value={formData.age}
+                  onChangeText={(text) => setFormData({ ...formData, age: text })}
+                  keyboardType="number-pad"
+                  returnKeyType="next"
+                  onSubmitEditing={() => gradeRef?.current?.focus()}
+                  blurOnSubmit={false}
+                />
 
-            <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={toggleMode}
-            >
-              <Text style={styles.toggleText}>
-                {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-              </Text>
-            </TouchableOpacity>
+                <Input
+                  ref={gradeRef}
+                  icon="school"
+                  placeholder="Grade/Year"
+                  value={formData.grade}
+                  onChangeText={(text) => setFormData({ ...formData, grade: text })}
+                  returnKeyType="next"
+                  onSubmitEditing={() => emailRef?.current?.focus()}
+                  blurOnSubmit={false}
+                />
+              </>
+            )}
 
-            {isLogin && (
-              <TouchableOpacity
-                style={styles.forgotButton}
-                onPress={() => navigation.navigate('ForgotPassword')}
-              >
-                <Text style={styles.forgotText}>Forgot Password?</Text>
-              </TouchableOpacity>
+            <Input
+              ref={emailRef}
+              icon="mail"
+              placeholder="Email"
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef?.current?.focus()}
+              blurOnSubmit={false}
+              error={error}
+            />
+
+            <Input
+              ref={passwordRef}
+              icon="lock-closed"
+              placeholder="Password"
+              value={formData.password}
+              onChangeText={(text) => setFormData({ ...formData, password: text })}
+              secureTextEntry
+              returnKeyType={isLogin ? "go" : "next"}
+              onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
+              blurOnSubmit={isLogin}
+              error={error}
+            />
+
+            {!isLogin && (
+              <Input
+                ref={confirmPasswordRef}
+                icon="lock-closed"
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+                secureTextEntry
+                returnKeyType="go"
+                onSubmitEditing={handleSubmit}
+                error={error}
+              />
             )}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+        </View>
+
+        <View style={styles.buttonSection}>
+          <Button
+            title={loading ? '' : (isLogin ? 'Sign In' : 'Sign Up')}
+            onPress={handleSubmit}
+            disabled={loading}
+            style={styles.submitButton}
+          >
+            {loading && <ActivityIndicator color={colors.background} />}
+          </Button>
+
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={toggleMode}
+          >
+            <Text style={styles.toggleText}>
+              {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+            </Text>
+          </TouchableOpacity>
+
+          {isLogin && (
+            <TouchableOpacity
+              style={styles.forgotButton}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAwareView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   scrollView: {
     flex: 1,
     backgroundColor: colors.background,
@@ -503,6 +466,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.xl : spacing.xl,
     paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
     minHeight: '100%',
+    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
@@ -519,41 +483,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.xl,
   },
-  form: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
   inputSection: {
     marginTop: spacing.lg,
   },
   buttonSection: {
     width: '100%',
     marginTop: spacing.xl,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    minHeight: Platform.OS === 'ios' ? 56 : 48,
-    ...shadows.small,
-  },
-  input: {
-    flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
-    marginLeft: spacing.sm,
-    height: '100%',
-    textAlignVertical: 'center',
-    lineHeight: Platform.OS === 'ios' ? 22 : undefined,
-    includeFontPadding: false,
-    minHeight: Platform.OS === 'ios' ? 44 : 40,
-  },
-  placeholderText: {
-    color: colors.textSecondary,
   },
   submitButton: {
     marginTop: spacing.md,
@@ -586,32 +521,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  genderOption: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.card,
-  },
-  genderOptionSelected: {
-    backgroundColor: colors.primary,
-  },
-  genderOptionText: {
-    ...typography.body,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  genderOptionTextSelected: {
-    color: colors.background,
-  },
   errorText: {
     color: colors.error,
     marginBottom: spacing.sm,
     textAlign: 'center',
-  },
-  inputError: {
-    borderColor: colors.error,
-    borderWidth: 1,
   },
   dropdownContainer: {
     zIndex: 1,
@@ -645,6 +558,31 @@ const styles = StyleSheet.create({
   },
   genderOptionTextSelected: {
     color: colors.background,
+  },
+  placeholderText: {
+    color: colors.textSecondary,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    minHeight: Platform.OS === 'ios' ? 56 : 48,
+    ...shadows.small,
+  },
+  input: {
+    flex: 1,
+    ...typography.body,
+    color: colors.text,
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
+    marginLeft: spacing.sm,
+    height: '100%',
+    textAlignVertical: 'center',
+    lineHeight: Platform.OS === 'ios' ? 22 : undefined,
+    includeFontPadding: false,
+    minHeight: Platform.OS === 'ios' ? 44 : 40,
   },
 });
 

@@ -1,70 +1,52 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
-import { userService } from '../../services/userService';
+import { colors, spacing, layout, typography } from '../../styles/theme';
 import Button from '../../components/common/Button';
+import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
+import { Input } from '../../components/common/Input';
+import { userService } from '../../services/userService';
 
 const ChangePasswordScreen = ({ navigation }) => {
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleChangePassword = async () => {
+  const currentPasswordRef = useRef(null);
+  const newPasswordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+
+  const handleSubmit = async () => {
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-
-      const { currentPassword, newPassword, confirmPassword } = formData;
-
-      // Validate inputs
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        Alert.alert('Error', 'Please fill in all fields');
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        Alert.alert('Error', 'New passwords do not match');
-        return;
-      }
-
-      if (newPassword.length < 6) {
-        Alert.alert('Error', 'Password must be at least 6 characters long');
-        return;
-      }
-
-      await userService.updatePassword(newPassword);
-      
-      Alert.alert(
-        'Success',
-        'Password updated successfully',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    } catch (error) {
-      console.error('Change password error:', error);
-      Alert.alert('Error', error.message || 'Failed to change password');
+      await userService.changePassword(formData.currentPassword, formData.newPassword);
+      navigation.goBack();
+    } catch (err) {
+      setError(err.message || 'Failed to change password');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
+    <KeyboardAwareView>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Ionicons name="lock-closed" size={60} color={colors.primary} />
           <Text style={styles.title}>Change Password</Text>
@@ -74,75 +56,71 @@ const ChangePasswordScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={styles.input}
-              placeholder="Current Password"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.currentPassword}
-              onChangeText={(text) => setFormData({ ...formData, currentPassword: text })}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="key" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={styles.input}
-              placeholder="New Password"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.newPassword}
-              onChangeText={(text) => setFormData({ ...formData, newPassword: text })}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
+          <Input
+            ref={currentPasswordRef}
+            icon="lock-closed"
+            placeholder="Current Password"
+            value={formData.currentPassword}
+            onChangeText={(text) => setFormData({ ...formData, currentPassword: text })}
+            secureTextEntry
+            returnKeyType="next"
+            onSubmitEditing={() => newPasswordRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="key" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm New Password"
-              placeholderTextColor={colors.textSecondary}
-              value={formData.confirmPassword}
-              onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
+          <Input
+            ref={newPasswordRef}
+            icon="lock-closed"
+            placeholder="New Password"
+            value={formData.newPassword}
+            onChangeText={(text) => setFormData({ ...formData, newPassword: text })}
+            secureTextEntry
+            returnKeyType="next"
+            onSubmitEditing={() => confirmPasswordRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
+
+          <Input
+            ref={confirmPasswordRef}
+            icon="lock-closed"
+            placeholder="Confirm New Password"
+            value={formData.confirmPassword}
+            onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+            secureTextEntry
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
+            error={error}
+          />
 
           <Button
-            title={loading ? '' : 'Update Password'}
-            onPress={handleChangePassword}
-            disabled={loading}
+            title="Change Password"
+            onPress={handleSubmit}
+            isLoading={isLoading}
             style={styles.submitButton}
-          >
-            {loading && <ActivityIndicator color={colors.background} />}
-          </Button>
+          />
 
           <Button
             title="Cancel"
             onPress={() => navigation.goBack()}
-            type="secondary"
+            variant="secondary"
             style={styles.cancelButton}
           />
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
     padding: spacing.xl,
-    justifyContent: 'center',
+    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.xl : spacing.xl,
+    backgroundColor: colors.background,
   },
   header: {
     alignItems: 'center',
@@ -151,8 +129,9 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     color: colors.text,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
@@ -161,26 +140,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   form: {
-    width: '100%',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  input: {
     flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: spacing.md,
-    marginLeft: spacing.sm,
+  },
+  errorText: {
+    color: colors.error,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   submitButton: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   cancelButton: {
     marginTop: spacing.md,

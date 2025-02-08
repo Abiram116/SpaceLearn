@@ -22,6 +22,8 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button as WebButton } from 'react-native';
+import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
+import { Input } from '../../components/common/Input';
 
 const SubjectsScreen = ({ navigation }) => {
   const [subjects, setSubjects] = useState([]);
@@ -34,6 +36,7 @@ const SubjectsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [error, setError] = useState(null);
 
   const insets = useSafeAreaInsets();
   const safeAreaInsets = {
@@ -264,15 +267,15 @@ const SubjectsScreen = ({ navigation }) => {
             </TouchableOpacity>
           ))}
           <View style={styles.addSubspaceContainer}>
-            <TextInput
+            <Input
               ref={subspaceInputRef}
-              style={[styles.subspaceInput, styles.focusedInput]}
+              icon="bookmark-outline"
               placeholder="New subspace name"
               value={newSubspaceName}
               onChangeText={setNewSubspaceName}
               onSubmitEditing={() => handleCreateSubspace(item.id)}
-              placeholderTextColor={colors.textSecondary}
               returnKeyType="done"
+              containerStyle={styles.subspaceInput}
             />
             <Button
               title="Add"
@@ -295,96 +298,91 @@ const SubjectsScreen = ({ navigation }) => {
   }
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-      >
-        <View style={styles.container}>
-          <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}>
-            <Text style={styles.headerTitle}>Your Subjects</Text>
-            <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              placeholder="Enter new subject name"
-              value={newSubjectName}
-              onChangeText={setNewSubjectName}
-              onSubmitEditing={handleCreateSubject}
-              placeholderTextColor={colors.textSecondary}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-            <Button
-              title="Create"
-              onPress={handleCreateSubject}
-              disabled={!newSubjectName.trim() || loading}
-              loading={loading}
-              style={styles.createButton}
-            />
-          </View>
-
-          {subjects.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons 
-                name="library-outline" 
-                size={64} 
-                color={colors.primary} 
-                style={styles.emptyIcon} 
-              />
-              <Text style={styles.emptyText}>No subjects yet</Text>
-              <Text style={styles.emptySubtext}>
-                Create your first subject to get started!
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={subjects}
-              renderItem={renderSubject}
-              keyExtractor={item => item.id.toString()}
-              contentContainerStyle={styles.list}
-              showsVerticalScrollIndicator={false}
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-            />
-          )}
+    <KeyboardAwareView>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}>
+          <Text style={styles.headerTitle}>Your Subjects</Text>
+          <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
         </View>
 
-        <Modal
-          visible={showDeleteModal}
-          transparent
-          animationType="none"
-          onRequestClose={() => setShowDeleteModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Confirm Deletion</Text>
-              <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]} 
-                  onPress={() => setShowDeleteModal(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.deleteButton]} 
-                  onPress={confirmDelete}
-                >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
+        <View style={styles.inputContainer}>
+          <Input
+            ref={inputRef}
+            icon="library-outline"
+            placeholder="Enter new subject name"
+            value={newSubjectName}
+            onChangeText={setNewSubjectName}
+            onSubmitEditing={handleCreateSubject}
+            returnKeyType="done"
+            blurOnSubmit={true}
+            error={error}
+            containerStyle={styles.newSubjectInput}
+          />
+          <Button
+            title="Create"
+            onPress={handleCreateSubject}
+            disabled={!newSubjectName.trim() || loading}
+            loading={loading}
+            style={styles.createButton}
+          />
+        </View>
+
+        {subjects.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons 
+              name="library-outline" 
+              size={64} 
+              color={colors.primary} 
+              style={styles.emptyIcon} 
+            />
+            <Text style={styles.emptyText}>No subjects yet</Text>
+            <Text style={styles.emptySubtext}>
+              Create your first subject to get started!
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={subjects}
+            renderItem={renderSubject}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          />
+        )}
+      </View>
+
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="none"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirm Deletion</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.deleteButton]} 
+                onPress={confirmDelete}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+        </View>
+      </Modal>
+    </KeyboardAwareView>
   );
 };
 
@@ -423,17 +421,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     alignItems: 'center',
   },
-  input: {
+  newSubjectInput: {
     flex: 1,
-    ...typography.body,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
     marginRight: spacing.md,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   list: {
     paddingHorizontal: spacing.contentHorizontal,
@@ -499,17 +489,7 @@ const styles = StyleSheet.create({
   },
   subspaceInput: {
     flex: 1,
-    ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
     marginRight: spacing.sm,
-    ...shadows.small,
-  },
-  focusedInput: {
-    borderColor: colors.primary,
-    borderWidth: 1,
   },
   emptyContainer: {
     flex: 1,

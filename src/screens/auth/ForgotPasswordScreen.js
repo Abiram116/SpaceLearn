@@ -1,104 +1,88 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
-import { userService } from '../../services/userService';
+import { colors, spacing, layout, typography } from '../../styles/theme';
 import Button from '../../components/common/Button';
+import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
+import { Input } from '../../components/common/Input';
+import { userService } from '../../services/userService';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const emailRef = useRef(null);
 
-  const handleResetPassword = async () => {
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
+  const handleSubmit = async () => {
+    if (!email) {
+      setError('Please enter your email address');
       return;
     }
+    setIsLoading(true);
+    setError('');
 
     try {
-      setLoading(true);
-      await userService.resetPassword(email.trim());
-      Alert.alert(
-        'Success',
-        'Password reset instructions have been sent to your email',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    } catch (error) {
-      console.error('Reset password error:', error);
-      Alert.alert('Error', error.message || 'Failed to send reset instructions');
+      await userService.forgotPassword(email);
+      navigation.navigate('ResetPassword', { email });
+    } catch (err) {
+      setError(err.message || 'Failed to process request');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
+    <KeyboardAwareView>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Ionicons name="lock-open" size={60} color={colors.primary} />
-          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.title}>Forgot Password</Text>
           <Text style={styles.subtitle}>
-            Enter your email address and we'll send you instructions to reset your password
+            Enter your email address to reset your password
           </Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-            />
-          </View>
+          {error && <Text style={styles.errorText}>{error}</Text>}
+          
+          <Input
+            ref={emailRef}
+            icon="mail"
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
+            error={error}
+          />
 
           <Button
-            title={loading ? '' : 'Send Reset Instructions'}
-            onPress={handleResetPassword}
-            disabled={loading}
+            title="Reset Password"
+            onPress={handleSubmit}
+            isLoading={isLoading}
             style={styles.submitButton}
-          >
-            {loading && <ActivityIndicator color={colors.background} />}
-          </Button>
+          />
 
           <Button
             title="Back to Sign In"
             onPress={() => navigation.goBack()}
-            type="secondary"
+            variant="secondary"
             style={styles.backButton}
           />
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
     padding: spacing.xl,
-    justifyContent: 'center',
+    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.xl : spacing.xl,
+    backgroundColor: colors.background,
   },
   header: {
     alignItems: 'center',
@@ -107,8 +91,9 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     color: colors.text,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
@@ -117,26 +102,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   form: {
-    width: '100%',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  input: {
     flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: spacing.md,
-    marginLeft: spacing.sm,
+  },
+  errorText: {
+    color: colors.error,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   submitButton: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   backButton: {
     marginTop: spacing.md,

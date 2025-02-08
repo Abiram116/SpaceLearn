@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Image,
@@ -16,10 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
 import { userService } from '../../services/userService';
 import Button from '../../components/common/Button';
+import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
+import { Input } from '../../components/common/Input';
 
 const EditProfileScreen = ({ route, navigation }) => {
   const { user, onUpdate } = route.params;
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     full_name: user.full_name || '',
     username: user.username || '',
@@ -30,13 +31,21 @@ const EditProfileScreen = ({ route, navigation }) => {
     avatar_url: user.avatar_url || '',
   });
 
+  const fullNameRef = useRef(null);
+  const usernameRef = useRef(null);
+  const genderRef = useRef(null);
+  const ageRef = useRef(null);
+  const gradeRef = useRef(null);
+  const bioRef = useRef(null);
+
   const handleUpdateProfile = async () => {
     try {
       setLoading(true);
+      setError('');
 
       // Validate required fields
       if (!formData.full_name || !formData.username) {
-        Alert.alert('Error', 'Name and username are required');
+        setError('Name and username are required');
         return;
       }
 
@@ -44,14 +53,14 @@ const EditProfileScreen = ({ route, navigation }) => {
       if (formData.age) {
         const ageNum = parseInt(formData.age);
         if (isNaN(ageNum) || ageNum < 13) {
-          Alert.alert('Error', 'Age must be at least 13');
+          setError('Age must be at least 13');
           return;
         }
       }
 
       // Validate gender if provided
       if (formData.gender && !['male', 'female', 'other', 'prefer_not_to_say'].includes(formData.gender.toLowerCase())) {
-        Alert.alert('Error', 'Invalid gender selection');
+        setError('Invalid gender selection');
         return;
       }
 
@@ -66,9 +75,9 @@ const EditProfileScreen = ({ route, navigation }) => {
       Alert.alert('Success', 'Profile updated successfully');
       onUpdate?.(); // Refresh profile data in parent screen
       navigation.goBack();
-    } catch (error) {
-      console.error('Update profile error:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile');
+    } catch (err) {
+      console.error('Update profile error:', err);
+      setError(err.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -80,15 +89,13 @@ const EditProfileScreen = ({ route, navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <KeyboardAwareView>
       <ScrollView 
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.avatarSection}>
           {formData.avatar_url ? (
@@ -111,77 +118,90 @@ const EditProfileScreen = ({ route, navigation }) => {
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.full_name}
-              onChangeText={(text) => setFormData({ ...formData, full_name: text })}
-              placeholder="Your full name"
-              placeholderTextColor={colors.textSecondary}
-              autoCapitalize="words"
-            />
-          </View>
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.username}
-              onChangeText={(text) => setFormData({ ...formData, username: text })}
-              placeholder="Your username"
-              placeholderTextColor={colors.textSecondary}
-              autoCapitalize="none"
-            />
-          </View>
+          <Input
+            ref={fullNameRef}
+            icon="person"
+            label="Full Name"
+            value={formData.full_name}
+            onChangeText={(text) => setFormData({ ...formData, full_name: text })}
+            placeholder="Your full name"
+            autoCapitalize="words"
+            returnKeyType="next"
+            onSubmitEditing={() => usernameRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Gender</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.gender}
-              onChangeText={(text) => setFormData({ ...formData, gender: text })}
-              placeholder="male/female/other/prefer_not_to_say"
-              placeholderTextColor={colors.textSecondary}
-              autoCapitalize="none"
-            />
-          </View>
+          <Input
+            ref={usernameRef}
+            icon="at"
+            label="Username"
+            value={formData.username}
+            onChangeText={(text) => setFormData({ ...formData, username: text })}
+            placeholder="Your username"
+            autoCapitalize="none"
+            returnKeyType="next"
+            onSubmitEditing={() => genderRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Age</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.age}
-              onChangeText={(text) => setFormData({ ...formData, age: text })}
-              placeholder="Your age"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="number-pad"
-            />
-          </View>
+          <Input
+            ref={genderRef}
+            icon="male-female"
+            label="Gender"
+            value={formData.gender}
+            onChangeText={(text) => setFormData({ ...formData, gender: text })}
+            placeholder="male/female/other/prefer_not_to_say"
+            autoCapitalize="none"
+            returnKeyType="next"
+            onSubmitEditing={() => ageRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Grade/Year</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.grade}
-              onChangeText={(text) => setFormData({ ...formData, grade: text })}
-              placeholder="Your grade or year"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
+          <Input
+            ref={ageRef}
+            icon="calendar"
+            label="Age"
+            value={formData.age}
+            onChangeText={(text) => setFormData({ ...formData, age: text })}
+            placeholder="Your age"
+            keyboardType="number-pad"
+            returnKeyType="next"
+            onSubmitEditing={() => gradeRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Bio</Text>
-            <TextInput
-              style={[styles.input, styles.bioInput]}
-              value={formData.bio}
-              onChangeText={(text) => setFormData({ ...formData, bio: text })}
-              placeholder="Tell us about yourself"
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              numberOfLines={4}
-            />
-          </View>
+          <Input
+            ref={gradeRef}
+            icon="school"
+            label="Grade/Year"
+            value={formData.grade}
+            onChangeText={(text) => setFormData({ ...formData, grade: text })}
+            placeholder="Your grade or year"
+            returnKeyType="next"
+            onSubmitEditing={() => bioRef?.current?.focus()}
+            blurOnSubmit={false}
+            error={error}
+          />
+
+          <Input
+            ref={bioRef}
+            icon="information-circle"
+            label="Bio"
+            value={formData.bio}
+            onChangeText={(text) => setFormData({ ...formData, bio: text })}
+            placeholder="Tell us about yourself"
+            multiline
+            numberOfLines={4}
+            returnKeyType="done"
+            onSubmitEditing={handleUpdateProfile}
+            error={error}
+          />
 
           <Button
             title={loading ? '' : 'Save Changes'}
@@ -193,7 +213,7 @@ const EditProfileScreen = ({ route, navigation }) => {
           </Button>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareView>
   );
 };
 
@@ -234,28 +254,13 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
-  inputContainer: {
-    marginBottom: spacing.lg,
-  },
-  label: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    ...shadows.small,
-  },
-  bioInput: {
-    minHeight: 100,
-    textAlignVertical: 'top',
+  errorText: {
+    color: colors.error,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   submitButton: {
-    marginTop: spacing.md,
+    marginTop: spacing.xl,
   },
 });
 
