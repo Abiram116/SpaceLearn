@@ -9,9 +9,10 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
 import { userService } from '../../services/userService';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -223,7 +224,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    padding: spacing.xl,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingTop: Platform.OS === 'ios' ? spacing.xxl + layout.statusBarHeight : spacing.xl,
+    paddingBottom: spacing.xl,
     backgroundColor: colors.primary,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
@@ -260,12 +263,14 @@ const styles = StyleSheet.create({
     ...typography.h2,
     color: colors.background,
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   username: {
     ...typography.body,
     color: colors.background,
     opacity: 0.8,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   bio: {
     ...typography.body,
@@ -275,7 +280,9 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
   },
   content: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingVertical: spacing.contentVertical,
+    paddingBottom: Platform.OS === 'ios' ? layout.bottomSpacing : spacing.xl,
   },
   infoCard: {
     padding: spacing.lg,

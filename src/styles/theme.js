@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet, Dimensions, Platform, StatusBar } from 'react-native';
 
 export const colors = {
   primary: '#6C63FF',
@@ -23,6 +23,20 @@ export const spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  contentHorizontal: Platform.OS === 'ios' ? 20 : 16,
+  contentVertical: Platform.OS === 'ios' ? 24 : 20,
+  screenPadding: Platform.select({
+    ios: {
+      paddingHorizontal: 20,
+      paddingTop: 44,
+      paddingBottom: 34,
+    },
+    android: {
+      paddingHorizontal: 16,
+      paddingTop: StatusBar.currentHeight,
+      paddingBottom: 24,
+    },
+  }),
 };
 
 export const typography = {
@@ -61,6 +75,13 @@ export const layout = {
     height: Dimensions.get('window').height,
   },
   isSmallDevice: Dimensions.get('window').width < 375,
+  statusBarHeight: Platform.OS === 'ios' ? 44 : StatusBar.currentHeight,
+  headerHeight: Platform.OS === 'ios' ? 88 : 64,
+  bottomSpacing: Platform.OS === 'ios' ? 34 : 24,
+  safeAreaPadding: {
+    paddingTop: Platform.OS === 'ios' ? 44 : StatusBar.currentHeight,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+  },
 };
 
 export const shadows = {
@@ -143,6 +164,11 @@ export const inputs = {
     borderColor: colors.border,
     fontSize: 16,
     color: colors.text,
+    minHeight: Platform.OS === 'ios' ? 44 : 40,
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'ios' ? 22 : undefined,
   },
   textInputError: {
     borderColor: colors.error,

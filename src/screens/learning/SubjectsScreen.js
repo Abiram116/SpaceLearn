@@ -16,7 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
 import { subjectService } from '../../services/subjectService';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -36,6 +36,10 @@ const SubjectsScreen = ({ navigation }) => {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const insets = useSafeAreaInsets();
+  const safeAreaInsets = {
+    top: insets?.top || Platform.OS === 'ios' ? 44 : 0,
+    bottom: insets?.bottom || Platform.OS === 'ios' ? 34 : 0,
+  };
   const inputRef = useRef(null);
   const subspaceInputRef = useRef(null);
 
@@ -291,94 +295,96 @@ const SubjectsScreen = ({ navigation }) => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
-      <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <Text style={styles.headerTitle}>Your Subjects</Text>
-          <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="Enter new subject name"
-            value={newSubjectName}
-            onChangeText={setNewSubjectName}
-            onSubmitEditing={handleCreateSubject}
-            placeholderTextColor={colors.textSecondary}
-            returnKeyType="done"
-            blurOnSubmit={true}
-          />
-          <Button
-            title="Create"
-            onPress={handleCreateSubject}
-            disabled={!newSubjectName.trim() || loading}
-            loading={loading}
-            style={styles.createButton}
-          />
-        </View>
-
-        {subjects.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons 
-              name="library-outline" 
-              size={64} 
-              color={colors.primary} 
-              style={styles.emptyIcon} 
-            />
-            <Text style={styles.emptyText}>No subjects yet</Text>
-            <Text style={styles.emptySubtext}>
-              Create your first subject to get started!
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={subjects}
-            renderItem={renderSubject}
-            keyExtractor={item => item.id.toString()}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-          />
-        )}
-      </View>
-
-      <Modal
-        visible={showDeleteModal}
-        transparent
-        animationType="none"
-        onRequestClose={() => setShowDeleteModal(false)}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirm Deletion</Text>
-            <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={() => setShowDeleteModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.deleteButton]} 
-                onPress={confirmDelete}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
+        <View style={styles.container}>
+          <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}>
+            <Text style={styles.headerTitle}>Your Subjects</Text>
+            <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="Enter new subject name"
+              value={newSubjectName}
+              onChangeText={setNewSubjectName}
+              onSubmitEditing={handleCreateSubject}
+              placeholderTextColor={colors.textSecondary}
+              returnKeyType="done"
+              blurOnSubmit={true}
+            />
+            <Button
+              title="Create"
+              onPress={handleCreateSubject}
+              disabled={!newSubjectName.trim() || loading}
+              loading={loading}
+              style={styles.createButton}
+            />
+          </View>
+
+          {subjects.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons 
+                name="library-outline" 
+                size={64} 
+                color={colors.primary} 
+                style={styles.emptyIcon} 
+              />
+              <Text style={styles.emptyText}>No subjects yet</Text>
+              <Text style={styles.emptySubtext}>
+                Create your first subject to get started!
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={subjects}
+              renderItem={renderSubject}
+              keyExtractor={item => item.id.toString()}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            />
+          )}
+        </View>
+
+        <Modal
+          visible={showDeleteModal}
+          transparent
+          animationType="none"
+          onRequestClose={() => setShowDeleteModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Confirm Deletion</Text>
+              <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton]} 
+                  onPress={() => setShowDeleteModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.deleteButton]} 
+                  onPress={confirmDelete}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+        </Modal>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -388,7 +394,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingTop: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -408,7 +416,8 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: spacing.md,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingVertical: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -419,14 +428,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     backgroundColor: colors.card,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
     marginRight: spacing.md,
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
   },
   list: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingTop: spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl,
   },
   subjectCard: {
     marginBottom: spacing.md,

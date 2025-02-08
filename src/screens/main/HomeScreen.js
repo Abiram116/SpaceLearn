@@ -8,13 +8,15 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { subjectService } from '../../services/subjectService';
 import { userService } from '../../services/userService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HomeScreen = ({ navigation }) => {
   const [recentActivities, setRecentActivities] = useState([]);
@@ -22,6 +24,12 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
+  
+  const insets = useSafeAreaInsets();
+  const safeAreaInsets = {
+    top: insets?.top || Platform.OS === 'ios' ? 44 : 0,
+    bottom: insets?.bottom || Platform.OS === 'ios' ? 34 : 0,
+  };
 
   useEffect(() => {
     loadUserData();
@@ -95,6 +103,9 @@ const HomeScreen = ({ navigation }) => {
   return (
     <ScrollView 
       style={styles.container} 
+      contentContainerStyle={{
+        paddingBottom: safeAreaInsets.bottom,
+      }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -105,7 +116,7 @@ const HomeScreen = ({ navigation }) => {
         />
       }
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: safeAreaInsets.top + spacing.lg }]}>
         <View>
           <Text style={styles.welcomeText}>Welcome to</Text>
           <Text style={styles.appName}>Space Learn</Text>
@@ -184,8 +195,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: spacing.xl,
-    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingBottom: spacing.xl,
     backgroundColor: colors.primary,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
@@ -227,7 +238,9 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   content: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.contentHorizontal,
+    paddingTop: spacing.contentVertical,
+    paddingBottom: Platform.OS === 'ios' ? layout.bottomSpacing : spacing.xl,
   },
   section: {
     marginBottom: spacing.xl,
@@ -241,7 +254,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    padding: spacing.md,
+    paddingVertical: Platform.OS === 'ios' ? spacing.md : spacing.sm,
+    paddingHorizontal: spacing.contentHorizontal,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.sm,
     ...shadows.small,
@@ -279,13 +293,12 @@ const styles = StyleSheet.create({
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    marginHorizontal: Platform.OS === 'ios' ? -spacing.sm : -spacing.xs,
   },
   featureCard: {
-    width: '48%',
+    width: '50%',
+    paddingHorizontal: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
     marginBottom: spacing.md,
-    alignItems: 'center',
-    padding: spacing.md,
   },
   featureIcon: {
     width: 48,
@@ -308,8 +321,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionSection: {
-    marginTop: spacing.xl,
-    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? layout.bottomSpacing : spacing.xl,
   },
 });
 
