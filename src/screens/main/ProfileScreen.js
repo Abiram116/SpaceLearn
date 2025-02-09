@@ -31,7 +31,10 @@ const ProfileScreen = ({ navigation }) => {
       const userData = await userService.getCurrentUser();
       if (userData) {
         setUser(userData);
-        setPreferences(userData.user_preferences[0] || {});
+        setPreferences({
+          notification_enabled: true,
+          ...userData.user_preferences?.[0]
+        });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -55,6 +58,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleEditProfile = () => {
+    if (!user) return;
     navigation.navigate('EditProfile', {
       user,
       onUpdate: loadUserProfile,
@@ -62,6 +66,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleToggleNotifications = async (value) => {
+    if (!user) return;
     try {
       await userService.updatePreferences(user.id, {
         notification_enabled: value,
@@ -74,6 +79,37 @@ const ProfileScreen = ({ navigation }) => {
       console.error('Error updating preferences:', error);
       Alert.alert('Error', 'Failed to update preferences');
     }
+  };
+
+  const handleDeleteAccount = () => {
+    if (!user) return;
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await userService.deleteAccount();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+              });
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   if (loading) {
@@ -125,21 +161,41 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.content}>
         <Card style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Ionicons name="school" size={24} color={colors.primary} />
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="person" size={24} color={colors.primary} />
+            </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Grade</Text>
-              <Text style={styles.infoValue}>{user.grade}</Text>
+              <Text style={styles.infoLabel}>Gender</Text>
+              <Text style={styles.infoValue}>
+                {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'Not specified'}
+              </Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="flame" size={24} color={colors.primary} />
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="calendar" size={24} color={colors.primary} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Age</Text>
+              <Text style={styles.infoValue}>{user.age || 'Not specified'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="flame" size={24} color={colors.primary} />
+            </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Learning Streak</Text>
               <Text style={styles.infoValue}>{user.streak_count} days</Text>
             </View>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar" size={24} color={colors.primary} />
+
+          <View style={[styles.infoRow, { marginBottom: 0 }]}>
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="time" size={24} color={colors.primary} />
+            </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Member Since</Text>
               <Text style={styles.infoValue}>
@@ -156,7 +212,9 @@ const ProfileScreen = ({ navigation }) => {
             onPress={handleEditProfile}
           >
             <View style={styles.settingLeft}>
-              <Ionicons name="person-circle" size={24} color={colors.primary} />
+              <View style={styles.settingIconContainer}>
+                <Ionicons name="person-circle" size={24} color={colors.primary} />
+              </View>
               <Text style={styles.settingText}>Edit Profile</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
@@ -164,7 +222,9 @@ const ProfileScreen = ({ navigation }) => {
 
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Ionicons name="notifications" size={24} color={colors.primary} />
+              <View style={styles.settingIconContainer}>
+                <Ionicons name="notifications" size={24} color={colors.primary} />
+              </View>
               <Text style={styles.settingText}>Notifications</Text>
             </View>
             <Switch
@@ -176,11 +236,13 @@ const ProfileScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={styles.settingRow}
+            style={[styles.settingRow, { borderBottomWidth: 0 }]}
             onPress={() => navigation.navigate('ChangePassword')}
           >
             <View style={styles.settingLeft}>
-              <Ionicons name="lock-closed" size={24} color={colors.primary} />
+              <View style={styles.settingIconContainer}>
+                <Ionicons name="lock-closed" size={24} color={colors.primary} />
+              </View>
               <Text style={styles.settingText}>Change Password</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
@@ -193,6 +255,13 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.signOutButton}
           type="secondary"
         />
+
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          onPress={handleDeleteAccount}
+        >
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -224,7 +293,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingHorizontal: spacing.contentHorizontal,
+    paddingHorizontal: spacing.lg,
     paddingTop: Platform.OS === 'ios' ? spacing.xxl + layout.statusBarHeight : spacing.xl,
     paddingBottom: spacing.xl,
     backgroundColor: colors.primary,
@@ -237,9 +306,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: colors.background,
     backgroundColor: colors.card,
   },
   avatarPlaceholder: {
@@ -257,10 +328,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
     ...shadows.small,
   },
   name: {
     ...typography.h2,
+    fontSize: 24,
     color: colors.background,
     marginBottom: spacing.xs,
     textAlign: 'center',
@@ -268,7 +342,7 @@ const styles = StyleSheet.create({
   username: {
     ...typography.body,
     color: colors.background,
-    opacity: 0.8,
+    opacity: 0.9,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
@@ -278,10 +352,10 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     textAlign: 'center',
     maxWidth: '80%',
+    lineHeight: 20,
   },
   content: {
-    paddingHorizontal: spacing.contentHorizontal,
-    paddingVertical: spacing.contentVertical,
+    padding: spacing.lg,
     paddingBottom: Platform.OS === 'ios' ? layout.bottomSpacing : spacing.xl,
   },
   infoCard: {
@@ -293,22 +367,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  infoIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
   infoContent: {
-    marginLeft: spacing.md,
     flex: 1,
   },
   infoLabel: {
     ...typography.caption,
     color: colors.textSecondary,
+    marginBottom: 2,
   },
   infoValue: {
     ...typography.body,
     color: colors.text,
+    fontWeight: '500',
   },
   sectionTitle: {
     ...typography.h3,
     color: colors.text,
     marginBottom: spacing.md,
+    marginTop: spacing.md,
   },
   settingsCard: {
     marginBottom: spacing.xl,
@@ -325,13 +410,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  settingIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
   settingText: {
     ...typography.body,
     color: colors.text,
-    marginLeft: spacing.md,
   },
   signOutButton: {
     marginTop: spacing.md,
+  },
+  deleteAccountButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  deleteAccountText: {
+    ...typography.body,
+    color: colors.error,
   },
 });
 

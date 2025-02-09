@@ -1,11 +1,7 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase, getCurrentUser } from '../services/supabaseClient';
+import React, { createContext, useState, useEffect } from 'react';
+import { supabase, getCurrentUser } from '../api/supabase/client';
 
-const AuthContext = createContext({});
-
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -18,7 +14,8 @@ export const AuthProvider = ({ children }) => {
     // Listen for authentication state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
-        setUser(session?.user ?? null);
+        const user = await getCurrentUser();
+        setUser(user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
@@ -102,11 +99,12 @@ export const AuthProvider = ({ children }) => {
     signUp,
     signOut,
     resetPassword,
+    checkUser,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }; 

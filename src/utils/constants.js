@@ -4,7 +4,7 @@ export const APP_VERSION = '1.0.0';
 
 // API Endpoints
 export const API_BASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-export const DEEPSPEAK_API_URL = process.env.EXPO_PUBLIC_DEEPSPEAK_API_URL;
+export const DEEPSEEK_API_URL = process.env.EXPO_PUBLIC_DEEPSEEK_API_URL;
 
 // Storage Keys
 export const STORAGE_KEYS = {

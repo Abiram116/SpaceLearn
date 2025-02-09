@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
@@ -17,25 +18,29 @@ import Button from '../../components/common/Button';
 import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
 import { Input } from '../../components/common/Input';
 
+const GENDER_OPTIONS = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Prefer not to say', value: 'prefer_not_to_say' },
+];
+
 const EditProfileScreen = ({ route, navigation }) => {
   const { user, onUpdate } = route.params;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [formData, setFormData] = useState({
     full_name: user.full_name || '',
     username: user.username || '',
     gender: user.gender || '',
     age: user.age?.toString() || '',
-    grade: user.grade || '',
     bio: user.bio || '',
     avatar_url: user.avatar_url || '',
   });
 
   const fullNameRef = useRef(null);
   const usernameRef = useRef(null);
-  const genderRef = useRef(null);
   const ageRef = useRef(null);
-  const gradeRef = useRef(null);
   const bioRef = useRef(null);
 
   const handleUpdateProfile = async () => {
@@ -59,7 +64,7 @@ const EditProfileScreen = ({ route, navigation }) => {
       }
 
       // Validate gender if provided
-      if (formData.gender && !['male', 'female', 'other', 'prefer_not_to_say'].includes(formData.gender.toLowerCase())) {
+      if (formData.gender && !['male', 'female', 'prefer_not_to_say'].includes(formData.gender.toLowerCase())) {
         setError('Invalid gender selection');
         return;
       }
@@ -73,7 +78,7 @@ const EditProfileScreen = ({ route, navigation }) => {
       await userService.updateProfile(user.id, updates);
       
       Alert.alert('Success', 'Profile updated successfully');
-      onUpdate?.(); // Refresh profile data in parent screen
+      onUpdate?.();
       navigation.goBack();
     } catch (err) {
       console.error('Update profile error:', err);
@@ -83,11 +88,6 @@ const EditProfileScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleUploadAvatar = () => {
-    // TODO: Implement image upload functionality
-    Alert.alert('Coming Soon', 'Image upload will be available in the next update');
-  };
-
   return (
     <KeyboardAwareView>
       <ScrollView 
@@ -95,7 +95,6 @@ const EditProfileScreen = ({ route, navigation }) => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         <View style={styles.avatarSection}>
           {formData.avatar_url ? (
@@ -110,7 +109,7 @@ const EditProfileScreen = ({ route, navigation }) => {
           )}
           <TouchableOpacity
             style={styles.uploadButton}
-            onPress={handleUploadAvatar}
+            onPress={() => Alert.alert('Coming Soon', 'Image upload will be available in the next update')}
           >
             <Ionicons name="camera" size={20} color={colors.primary} />
             <Text style={styles.uploadText}>Change Photo</Text>
@@ -131,7 +130,6 @@ const EditProfileScreen = ({ route, navigation }) => {
             returnKeyType="next"
             onSubmitEditing={() => usernameRef?.current?.focus()}
             blurOnSubmit={false}
-            error={error}
           />
 
           <Input
@@ -143,24 +141,25 @@ const EditProfileScreen = ({ route, navigation }) => {
             placeholder="Your username"
             autoCapitalize="none"
             returnKeyType="next"
-            onSubmitEditing={() => genderRef?.current?.focus()}
-            blurOnSubmit={false}
-            error={error}
-          />
-
-          <Input
-            ref={genderRef}
-            icon="male-female"
-            label="Gender"
-            value={formData.gender}
-            onChangeText={(text) => setFormData({ ...formData, gender: text })}
-            placeholder="male/female/other/prefer_not_to_say"
-            autoCapitalize="none"
-            returnKeyType="next"
             onSubmitEditing={() => ageRef?.current?.focus()}
             blurOnSubmit={false}
-            error={error}
           />
+
+          <TouchableOpacity
+            style={styles.genderSelector}
+            onPress={() => setShowGenderPicker(true)}
+          >
+            <View style={styles.genderButton}>
+              <Ionicons name="male-female" size={20} color={colors.primary} />
+              <Text style={styles.genderButtonText}>
+                {formData.gender ? 
+                  GENDER_OPTIONS.find(opt => opt.value === formData.gender)?.label || 'Select Gender' 
+                  : 'Select Gender'
+                }
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
 
           <Input
             ref={ageRef}
@@ -171,22 +170,8 @@ const EditProfileScreen = ({ route, navigation }) => {
             placeholder="Your age"
             keyboardType="number-pad"
             returnKeyType="next"
-            onSubmitEditing={() => gradeRef?.current?.focus()}
-            blurOnSubmit={false}
-            error={error}
-          />
-
-          <Input
-            ref={gradeRef}
-            icon="school"
-            label="Grade/Year"
-            value={formData.grade}
-            onChangeText={(text) => setFormData({ ...formData, grade: text })}
-            placeholder="Your grade or year"
-            returnKeyType="next"
             onSubmitEditing={() => bioRef?.current?.focus()}
             blurOnSubmit={false}
-            error={error}
           />
 
           <Input
@@ -198,9 +183,7 @@ const EditProfileScreen = ({ route, navigation }) => {
             placeholder="Tell us about yourself"
             multiline
             numberOfLines={4}
-            returnKeyType="done"
-            onSubmitEditing={handleUpdateProfile}
-            error={error}
+            style={styles.bioInput}
           />
 
           <Button
@@ -212,6 +195,42 @@ const EditProfileScreen = ({ route, navigation }) => {
             {loading && <ActivityIndicator color={colors.background} />}
           </Button>
         </View>
+
+        <Modal
+          visible={showGenderPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowGenderPicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowGenderPicker(false)}
+          >
+            <View style={styles.modalContent}>
+              {GENDER_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.genderOption,
+                    formData.gender === option.value && styles.genderOptionSelected
+                  ]}
+                  onPress={() => {
+                    setFormData({ ...formData, gender: option.value });
+                    setShowGenderPicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.genderOptionText,
+                    formData.gender === option.value && styles.genderOptionTextSelected
+                  ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </ScrollView>
     </KeyboardAwareView>
   );
@@ -253,11 +272,65 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
+    gap: spacing.md,
   },
   errorText: {
     color: colors.error,
     marginBottom: spacing.sm,
     textAlign: 'center',
+  },
+  genderSelector: {
+    marginBottom: spacing.md,
+  },
+  genderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  genderButtonText: {
+    ...typography.body,
+    flex: 1,
+    marginLeft: spacing.sm,
+    color: colors.text,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    width: '80%',
+    maxWidth: 300,
+    ...shadows.large,
+  },
+  genderOption: {
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.xs,
+  },
+  genderOptionSelected: {
+    backgroundColor: colors.primary,
+  },
+  genderOptionText: {
+    ...typography.body,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  genderOptionTextSelected: {
+    color: colors.background,
+    fontWeight: '600',
+  },
+  bioInput: {
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
   submitButton: {
     marginTop: spacing.xl,

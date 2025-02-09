@@ -52,9 +52,11 @@ const MainApp = () => {
         component={SubspaceScreen}
         options={{
           headerShown: true,
-          presentation: 'modal',
-          animation: 'slide_from_bottom',
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
         }}
+        initialParams={{ subjectId: null, subspaceId: null }}
       />
       <Stack.Screen
         name="EditProfile"
@@ -113,7 +115,7 @@ const TabNavigator = () => {
         name="Home" 
         component={HomeScreen}
         options={{
-          title: 'Space Learn',
+          headerShown: false,
         }}
       />
       <Tab.Screen 

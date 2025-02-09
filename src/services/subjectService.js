@@ -13,13 +13,19 @@ export const subjectService = {
 
   // Create a new subject
   createSubject: async (name) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No authenticated user');
+
     const response = await supabase
       .from('subjects')
-      .insert([{ name }])
+      .insert([{ 
+        name,
+        user_id: user.id 
+      }])
       .select()
       .single();
     
-    return supabase.handleResponse(response);
+    return handleResponse(response);
   },
 
   // Update subject name
@@ -90,33 +96,86 @@ export const subjectService = {
 
   // Get recent activities
   getRecentActivities: async () => {
-    const response = await supabase
-      .from('learning_sessions')
-      .select(`
-        *,
-        subject:subjects(*),
-        subspace:subspaces(*)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    return supabase.handleResponse(response);
+    try {
+      const { data, error } = await supabase
+        .from('learning_sessions')
+        .select(`
+          *,
+          subject:subjects(*),
+          subspace:subspaces(*)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error('Error getting recent activities:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getRecentActivities:', error);
+      return [];
+    }
   },
 
-  // Record a learning session
+  // Get last accessed subspace
+  getLastAccessedSubspace: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subspaces')
+        .select(`
+          *,
+          subject:subjects(*)
+        `)
+        .order('last_accessed', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error getting last accessed subspace:', error);
+        return null;
+      }
+
+      if (!data) {
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getLastAccessedSubspace:', error);
+      return null;
+    }
+  },
+
+  // Record learning session and update streak
   recordLearningSession: async (userId, subjectId, subspaceId, durationMinutes) => {
-    const response = await supabase
-      .from('learning_sessions')
-      .insert([{
-        user_id: userId,
-        subject_id: subjectId,
-        subspace_id: subspaceId,
-        duration_minutes: durationMinutes,
-      }])
-      .select()
-      .single();
-    
-    return supabase.handleResponse(response);
+    const [sessionResponse, streakResponse] = await Promise.all([
+      supabase
+        .from('learning_sessions')
+        .insert([{
+          user_id: userId,
+          subject_id: subjectId,
+          subspace_id: subspaceId,
+          duration_minutes: durationMinutes,
+        }])
+        .select()
+        .single(),
+      
+      supabase
+        .from('users')
+        .update({ 
+          last_activity_date: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .single(),
+    ]);
+
+    return {
+      session: handleResponse(sessionResponse),
+      streak: handleResponse(streakResponse),
+    };
   },
 
   // Update last accessed time for subspace
@@ -124,8 +183,10 @@ export const subjectService = {
     const response = await supabase
       .from('subspaces')
       .update({ last_accessed: new Date().toISOString() })
-      .eq('id', subspaceId);
+      .eq('id', subspaceId)
+      .select()
+      .single();
     
-    return supabase.handleResponse(response);
+    return handleResponse(response);
   },
 }; 

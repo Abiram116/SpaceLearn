@@ -54,13 +54,16 @@ export const userService = {
 
       if (authError) throw authError;
 
+      // Remove grade field if it exists in profileData
+      const { grade, ...cleanProfileData } = profileData;
+
       // Then, create user profile
       const response = await supabase
         .from('users')
         .insert([{
           id: authData.user.id,
           email,
-          ...profileData,
+          ...cleanProfileData,
         }])
         .select()
         .single();
@@ -110,16 +113,64 @@ export const userService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const response = await supabase
+      console.log('Checking for existing user profile...');
+      
+      // First check if user exists in the users table
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
-        .select(`
-          *,
-          user_preferences (*)
-        `)
+        .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();  // Use maybeSingle instead of single to avoid errors
 
-      return handleResponse(response);
+      console.log('Existing user check result:', { existingUser, checkError });
+
+      // If user doesn't exist in the users table, create a profile
+      if (!existingUser && !checkError) {
+        console.log('Creating new user profile...');
+        
+        const newUserData = {
+          id: user.id,
+          email: user.email,
+          username: user.email.split('@')[0],
+          full_name: user.user_metadata?.full_name || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          streak_count: 0,
+          last_activity_date: new Date().toISOString(),
+          bio: '',
+          avatar_url: '',
+          gender: null,
+          age: null
+        };
+
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .upsert([newUserData])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating user profile:', createError);
+          throw createError;
+        }
+
+        console.log('New user profile created:', newUser);
+        return newUser;
+      }
+
+      if (checkError) {
+        console.error('Error checking user profile:', checkError);
+        throw checkError;
+      }
+
+      // Safely handle the grade field removal
+      if (existingUser) {
+        const { grade, ...userWithoutGrade } = existingUser;
+        console.log('Profile data loaded:', userWithoutGrade);
+        return userWithoutGrade;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error in getCurrentUser:', error);
       throw error;
@@ -165,30 +216,43 @@ export const userService = {
   // Get user streak
   getUserStreak: async (userId) => {
     try {
-      const response = await supabase
+      console.log('Getting user streak for ID:', userId);
+      
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('streak_count, last_activity_date')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (response.error) throw response.error;
+      if (checkError) {
+        console.error('Error checking user streak:', checkError);
+        throw checkError;
+      }
 
-      const { streak_count, last_activity_date } = response.data;
+      // If no user found, return default values
+      if (!existingUser) {
+        console.log('No user profile found for streak, returning defaults');
+        return { streak_count: 0, last_activity_date: null };
+      }
+
+      const { streak_count, last_activity_date } = existingUser;
+      
+      console.log('Current streak data:', { streak_count, last_activity_date });
       
       // Update streak if needed
-      await userService.updateStreak(userId, streak_count, last_activity_date);
-
-      // Get updated streak
-      const updatedResponse = await supabase
-        .from('users')
-        .select('streak_count, last_activity_date')
-        .eq('id', userId)
-        .single();
-
-      return handleResponse(updatedResponse);
+      try {
+        const updatedStreak = await userService.updateStreak(userId, streak_count, last_activity_date);
+        console.log('Updated streak:', updatedStreak);
+        return updatedStreak;
+      } catch (updateError) {
+        console.error('Error updating streak:', updateError);
+        // If update fails, return the existing streak data
+        return { streak_count, last_activity_date };
+      }
     } catch (error) {
       console.error('Error in getUserStreak:', error);
-      throw error;
+      // Return default values on error
+      return { streak_count: 0, last_activity_date: null };
     }
   },
 
@@ -259,4 +323,29 @@ export const userService = {
       throw error;
     }
   },
+
+  // Delete user account and all associated data
+  deleteAccount: async () => {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Delete user data from the database (this will cascade to all related tables)
+      const { error: deleteError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      // Sign out the user
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+
+    } catch (error) {
+      console.error('Error in deleteAccount:', error);
+      throw error;
+    }
+  }
 }; 

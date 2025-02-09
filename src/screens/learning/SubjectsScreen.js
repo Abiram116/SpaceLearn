@@ -190,6 +190,7 @@ const SubjectsScreen = ({ navigation }) => {
   const handleSubspacePress = (subspace, subject) => {
     navigation.navigate('Subspace', {
       subspaceId: subspace.id,
+      subjectId: subject.id,
       subspaceName: subspace.name,
       subjectName: subject.name
     });
