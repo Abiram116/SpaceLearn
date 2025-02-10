@@ -3,95 +3,139 @@ import { supabase, handleResponse } from '../api/supabase/client';
 export const subjectService = {
   // Get all subjects for the current user
   getSubjects: async () => {
-    const response = await supabase
-      .from('subjects')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    return handleResponse(response);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const response = await supabase
+        .from('subjects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in getSubjects:', error);
+      throw error;
+    }
   },
 
   // Create a new subject
   createSubject: async (name) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No authenticated user');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
 
-    const response = await supabase
-      .from('subjects')
-      .insert([{ 
-        name,
-        user_id: user.id 
-      }])
-      .select()
-      .single();
-    
-    return handleResponse(response);
+      const response = await supabase
+        .from('subjects')
+        .insert([{ 
+          name,
+          user_id: user.id 
+        }])
+        .select()
+        .single();
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in createSubject:', error);
+      throw error;
+    }
   },
 
   // Update subject name
   updateSubject: async (id, name) => {
-    const response = await supabase
-      .from('subjects')
-      .update({ name })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    return supabase.handleResponse(response);
+    try {
+      const response = await supabase
+        .from('subjects')
+        .update({ name })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in updateSubject:', error);
+      throw error;
+    }
   },
 
   // Delete a subject
   deleteSubject: async (id) => {
-    const response = await supabase
-      .from('subjects')
-      .delete()
-      .eq('id', id);
-    
-    return supabase.handleResponse(response);
+    try {
+      const response = await supabase
+        .from('subjects')
+        .delete()
+        .eq('id', id);
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in deleteSubject:', error);
+      throw error;
+    }
   },
 
   // Get all subspaces for a subject
   getSubspaces: async (subjectId) => {
-    const response = await supabase
-      .from('subspaces')
-      .select('*')
-      .eq('subject_id', subjectId)
-      .order('created_at', { ascending: false });
-    
-    return supabase.handleResponse(response);
+    try {
+      const response = await supabase
+        .from('subspaces')
+        .select('*')
+        .eq('subject_id', subjectId)
+        .order('created_at', { ascending: false });
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in getSubspaces:', error);
+      throw error;
+    }
   },
 
   // Create a new subspace
   createSubspace: async (subjectId, name, description = '') => {
-    const response = await supabase
-      .from('subspaces')
-      .insert([{ subject_id: subjectId, name, description }])
-      .select()
-      .single();
-    
-    return supabase.handleResponse(response);
+    try {
+      const response = await supabase
+        .from('subspaces')
+        .insert([{ subject_id: subjectId, name, description }])
+        .select()
+        .single();
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in createSubspace:', error);
+      throw error;
+    }
   },
 
   // Update subspace
   updateSubspace: async (id, updates) => {
-    const response = await supabase
-      .from('subspaces')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    return supabase.handleResponse(response);
+    try {
+      const response = await supabase
+        .from('subspaces')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in updateSubspace:', error);
+      throw error;
+    }
   },
 
   // Delete a subspace
   deleteSubspace: async (id) => {
-    const response = await supabase
-      .from('subspaces')
-      .delete()
-      .eq('id', id);
-    
-    return supabase.handleResponse(response);
+    try {
+      const response = await supabase
+        .from('subspaces')
+        .delete()
+        .eq('id', id);
+      
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error in deleteSubspace:', error);
+      throw error;
+    }
   },
 
   // Get recent activities

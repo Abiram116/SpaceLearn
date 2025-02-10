@@ -37,6 +37,7 @@ const SubjectsScreen = ({ navigation }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [error, setError] = useState(null);
+  const [loadingSubspaces, setLoadingSubspaces] = useState({});
 
   const insets = useSafeAreaInsets();
   const safeAreaInsets = {
@@ -61,11 +62,15 @@ const SubjectsScreen = ({ navigation }) => {
   }, []);
 
   const loadSubjects = async () => {
+    setError(null);
     try {
+      setLoading(true);
       const data = await subjectService.getSubjects();
       setSubjects(data || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load subjects');
+      console.error('Error loading subjects:', error);
+      setError(error.message || 'Failed to load subjects');
+      Alert.alert('Error', error.message || 'Failed to load subjects');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,11 +83,17 @@ const SubjectsScreen = ({ navigation }) => {
   };
 
   const loadSubspaces = async (subjectId) => {
+    setError(null);
     try {
+      setLoadingSubspaces(prev => ({ ...prev, [subjectId]: true }));
       const data = await subjectService.getSubspaces(subjectId);
       setSubspaces(prev => ({ ...prev, [subjectId]: data }));
     } catch (error) {
-      Alert.alert('Error', 'Failed to load subspaces');
+      console.error('Error loading subspaces:', error);
+      setError(error.message || 'Failed to load subspaces');
+      Alert.alert('Error', error.message || 'Failed to load subspaces');
+    } finally {
+      setLoadingSubspaces(prev => ({ ...prev, [subjectId]: false }));
     }
   };
 
@@ -93,31 +104,34 @@ const SubjectsScreen = ({ navigation }) => {
   const handleCreateSubject = async () => {
     if (!newSubjectName.trim()) return;
     
-    setLoading(true);
+    setError(null);
     try {
+      setLoading(true);
       const subject = await subjectService.createSubject(newSubjectName.trim());
       if (subject) {
         setSubjects(prev => [subject, ...prev]);
         setNewSubjectName('');
         dismissKeyboard();
-      } else {
-        throw new Error('Failed to create subject');
       }
     } catch (error) {
       console.error('Error creating subject:', error);
-      Alert.alert('Error', 'Failed to create subject. Please try again.');
+      setError(error.message || 'Failed to create subject');
+      Alert.alert('Error', error.message || 'Failed to create subject. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleUpdateSubject = async (id, name) => {
+    setError(null);
     try {
       const updated = await subjectService.updateSubject(id, name);
       setSubjects(prev => prev.map(s => s.id === id ? updated : s));
       setEditingSubject(null);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update subject');
+      console.error('Error updating subject:', error);
+      setError(error.message || 'Failed to update subject');
+      Alert.alert('Error', error.message || 'Failed to update subject');
     }
   };
 
@@ -170,7 +184,10 @@ const SubjectsScreen = ({ navigation }) => {
 
   const handleCreateSubspace = async (subjectId) => {
     if (!newSubspaceName.trim()) return;
+    
+    setError(null);
     try {
+      setLoadingSubspaces(prev => ({ ...prev, [subjectId]: true }));
       const subspace = await subjectService.createSubspace(subjectId, newSubspaceName.trim());
       setSubspaces(prev => ({
         ...prev,
@@ -183,7 +200,11 @@ const SubjectsScreen = ({ navigation }) => {
         }
       }, 100);
     } catch (error) {
-      Alert.alert('Error', 'Failed to create subspace');
+      console.error('Error creating subspace:', error);
+      setError(error.message || 'Failed to create subspace');
+      Alert.alert('Error', error.message || 'Failed to create subspace');
+    } finally {
+      setLoadingSubspaces(prev => ({ ...prev, [subjectId]: false }));
     }
   };
 
@@ -244,29 +265,21 @@ const SubjectsScreen = ({ navigation }) => {
 
       {expandedSubject === item.id && (
         <View style={styles.subspacesContainer}>
-          {subspaces[item.id]?.map(subspace => (
-            <TouchableOpacity
-              key={subspace.id}
-              style={styles.subspaceItem}
-              onPress={() => handleSubspacePress(subspace, item)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.subspaceContent}>
-                <Ionicons name="bookmark-outline" size={16} color={colors.primary} />
-                <Text style={styles.subspaceName}>{subspace.name}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDeleteSubspace(item.id, subspace.id);
-                }}
-                style={styles.actionButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close-circle" size={20} color={colors.error} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+          {loadingSubspaces[item.id] ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              {subspaces[item.id]?.map(subspace => (
+                <TouchableOpacity
+                  key={subspace.id}
+                  style={styles.subspaceItem}
+                  onPress={() => handleSubspacePress(subspace, item)}
+                >
+                  <Text style={styles.subspaceName}>{subspace.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
           <View style={styles.addSubspaceContainer}>
             <Input
               ref={subspaceInputRef}

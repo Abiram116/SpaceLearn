@@ -26,41 +26,25 @@ if (Platform.OS === 'web') {
   const style = document.createElement('style');
   style.textContent = `
     * {
-      -webkit-tap-highlight-color: transparent !important;
-      outline: none !important;
-      box-shadow: none !important;
+      -webkit-tap-highlight-color: transparent;
     }
 
     input, textarea, select, button {
-      outline: none !important;
-      border: none !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      appearance: none !important;
-      background-color: transparent !important;
-      box-shadow: none !important;
+      font-family: inherit;
+      border-radius: inherit;
     }
     
-    input:focus, textarea:focus, select:focus, button:focus {
-      outline: none !important;
-      box-shadow: none !important;
-      -webkit-box-shadow: none !important;
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: ${colors.primary};
     }
     
-    input:hover, textarea:hover, select:hover, button:hover {
-      outline: none !important;
-    }
-
     input::selection {
-      background-color: transparent !important;
+      background-color: ${colors.primary}40;
     }
 
     input::-moz-selection {
-      background-color: transparent !important;
-    }
-
-    *:focus {
-      outline: none !important;
+      background-color: ${colors.primary}40;
     }
   `;
   document.head.appendChild(style);

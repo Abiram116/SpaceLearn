@@ -21,18 +21,41 @@ export const Input = forwardRef(({
           style={styles.icon}
         />
       )}
-      <TextInput
-        ref={ref}
-        style={[
-          styles.input,
-          icon && styles.inputWithIcon,
-          multiline && styles.multilineInput,
-          style,
-        ]}
-        placeholderTextColor={colors.textSecondary}
-        autoCapitalize="none"
-        {...props}
-      />
+      {Platform.OS === 'web' ? (
+        <input
+          ref={ref}
+          style={{
+            flex: 1,
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: colors.text,
+            fontSize: '16px',
+            padding: `${spacing.sm}px`,
+            width: '100%',
+            outline: 'none',
+            minHeight: '40px',
+            fontFamily: 'inherit',
+          }}
+          placeholder={props.placeholder}
+          value={props.value}
+          onChange={(e) => props.onChangeText?.(e.target.value)}
+          type={props.secureTextEntry ? 'password' : 'text'}
+          autoCapitalize={props.autoCapitalize}
+          {...props}
+        />
+      ) : (
+        <TextInput
+          ref={ref}
+          style={[
+            styles.input,
+            icon && styles.inputWithIcon,
+            multiline && styles.multilineInput,
+            style,
+          ]}
+          placeholderTextColor={colors.textSecondary}
+          {...props}
+        />
+      )}
     </View>
   );
 });
