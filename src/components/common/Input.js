@@ -9,8 +9,34 @@ export const Input = forwardRef(({
   containerStyle,
   error,
   multiline = false,
+  secureTextEntry,
+  onChangeText,
+  onSubmitEditing,
+  keyboardType,
+  returnKeyType,
+  blurOnSubmit,
   ...props
 }, ref) => {
+  const handleChange = (e) => {
+    if (Platform.OS === 'web') {
+      onChangeText?.(e.target.value);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (Platform.OS === 'web' && e.key === 'Enter' && onSubmitEditing) {
+      e.preventDefault();
+      onSubmitEditing();
+    }
+  };
+
+  const getInputType = () => {
+    if (secureTextEntry) return 'password';
+    if (keyboardType === 'email-address') return 'email';
+    if (keyboardType === 'number-pad') return 'number';
+    return 'text';
+  };
+
   return (
     <View style={[styles.container, error && styles.errorContainer, containerStyle]}>
       {icon && (
@@ -36,11 +62,9 @@ export const Input = forwardRef(({
             minHeight: '40px',
             fontFamily: 'inherit',
           }}
-          placeholder={props.placeholder}
-          value={props.value}
-          onChange={(e) => props.onChangeText?.(e.target.value)}
-          type={props.secureTextEntry ? 'password' : 'text'}
-          autoCapitalize={props.autoCapitalize}
+          type={getInputType()}
+          onChange={handleChange}
+          onKeyDown={handleKeyPress}
           {...props}
         />
       ) : (
@@ -53,6 +77,12 @@ export const Input = forwardRef(({
             style,
           ]}
           placeholderTextColor={colors.textSecondary}
+          secureTextEntry={secureTextEntry}
+          onChangeText={onChangeText}
+          onSubmitEditing={onSubmitEditing}
+          keyboardType={keyboardType}
+          returnKeyType={returnKeyType}
+          blurOnSubmit={blurOnSubmit}
           {...props}
         />
       )}

@@ -78,21 +78,36 @@ export const userService = {
   // Sign in user
   signIn: async (email, password) => {
     try {
+      console.log('Starting sign in process for:', email);
+      
+      if (!email || !password) {
+        console.error('Missing email or password');
+        return { error: 'Please provide both email and password' };
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Supabase sign in error:', error);
         if (error.message.includes('Invalid login credentials')) {
           return { error: 'Incorrect email or password. Please try again.' };
         }
-        throw error;
+        return { error: error.message || 'Failed to sign in' };
       }
+
+      if (!data?.user) {
+        console.error('No user data returned from sign in');
+        return { error: 'Failed to sign in' };
+      }
+
+      console.log('Sign in successful for:', email);
       return { data };
     } catch (error) {
-      console.error('Error in signIn:', error);
-      throw error;
+      console.error('Unexpected error in signIn:', error);
+      return { error: error.message || 'An unexpected error occurred' };
     }
   },
 

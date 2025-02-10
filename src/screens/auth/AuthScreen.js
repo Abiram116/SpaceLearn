@@ -82,7 +82,15 @@ const AuthScreen = ({ navigation }) => {
   const gradeRef = useRef(null);
   const genderInputRef = useRef(null);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    if (Platform.OS === 'web' && e) {
+      e.preventDefault();
+    }
+
+    if (loading) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
@@ -90,19 +98,33 @@ const AuthScreen = ({ navigation }) => {
       if (isLogin) {
         const { email, password } = formData;
         if (!email || !password) {
-          Alert.alert('Error', 'Please fill in all fields');
+          setError('Please fill in all fields');
+          setLoading(false);
           return;
         }
 
+        console.log('Attempting to sign in...', { email });
         const { data, error } = await userService.signIn(email, password);
+        
         if (error) {
-          setError(error);
+          console.error('Sign in error:', error);
+          setError(typeof error === 'string' ? error : error.message || 'Failed to sign in');
+          setLoading(false);
           return;
         }
 
+        if (!data) {
+          console.error('No data returned from sign in');
+          setError('Failed to sign in');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Sign in successful, navigating to MainApp');
+        setLoading(false);
         navigation.reset({
           index: 0,
-          routes: [{ name: 'App' }],
+          routes: [{ name: 'MainApp' }],
         });
       } else {
         const {
@@ -147,13 +169,12 @@ const AuthScreen = ({ navigation }) => {
 
         navigation.reset({
           index: 0,
-          routes: [{ name: 'App' }],
+          routes: [{ name: 'MainApp' }],
         });
       }
     } catch (err) {
       console.error('Auth error:', err);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
+      setError(err.message || 'An unexpected error occurred. Please try again.');
       setLoading(false);
     }
   };
@@ -234,208 +255,433 @@ const AuthScreen = ({ navigation }) => {
 
   return (
     <KeyboardAwareView keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        bounces={false}
-      >
-        <View>
-          <View style={styles.header}>
-            <Ionicons name="school" size={60} color={colors.primary} />
-            <Text style={styles.title}>Space Learn</Text>
-            <Text style={styles.subtitle}>
-              {isLogin ? 'Welcome back!' : 'Create your account'}
-            </Text>
-          </View>
+      {Platform.OS === 'web' ? (
+        <form onSubmit={handleSubmit} style={{ flex: 1 }}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            bounces={false}
+          >
+            <View>
+              <View style={styles.header}>
+                <Ionicons name="school" size={60} color={colors.primary} />
+                <Text style={styles.title}>Space Learn</Text>
+                <Text style={styles.subtitle}>
+                  {isLogin ? 'Welcome back!' : 'Create your account'}
+                </Text>
+              </View>
 
-          <View style={styles.inputSection}>
-            {error && <Text style={styles.errorText}>{error}</Text>}
-            {!isLogin && (
-              <>
+              <View style={styles.inputSection}>
+                {error && <Text style={styles.errorText}>{error}</Text>}
+                {!isLogin && (
+                  <>
+                    <Input
+                      ref={emailRef}
+                      icon="person"
+                      placeholder="Full Name"
+                      value={formData.fullName}
+                      onChangeText={(text) => setFormData({ ...formData, fullName: text })}
+                      autoCapitalize="words"
+                      returnKeyType="next"
+                      onSubmitEditing={() => usernameRef?.current?.focus()}
+                      blurOnSubmit={false}
+                    />
+
+                    <Input
+                      ref={usernameRef}
+                      icon="at"
+                      placeholder="Username"
+                      value={formData.username}
+                      onChangeText={(text) => setFormData({ ...formData, username: text })}
+                      autoCapitalize="none"
+                      returnKeyType="next"
+                      onSubmitEditing={() => handleGenderPress()}
+                      blurOnSubmit={false}
+                    />
+
+                    <View style={styles.dropdownContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.inputContainer,
+                          showGenderPicker && {
+                            borderBottomLeftRadius: 0,
+                            borderBottomRightRadius: 0,
+                            borderBottomWidth: 0,
+                            borderBottomColor: 'transparent',
+                            marginBottom: 0,
+                          }
+                        ]}
+                        onPress={() => setShowGenderPicker(!showGenderPicker)}
+                      >
+                        <Ionicons name="male-female" size={20} color={colors.textSecondary} />
+                        <Text
+                          style={[
+                            styles.input,
+                            !formData.gender && styles.placeholderText,
+                          ]}
+                        >
+                          {formData.gender
+                            ? GENDER_OPTIONS.find(option => option.value === formData.gender)?.label
+                            : 'Select Gender'}
+                        </Text>
+                        <Ionicons 
+                          name={showGenderPicker ? "chevron-up" : "chevron-down"} 
+                          size={20} 
+                          color={colors.textSecondary} 
+                        />
+                      </TouchableOpacity>
+                      {showGenderPicker && (
+                        <View style={styles.dropdownList}>
+                          {GENDER_OPTIONS.map((option, index) => (
+                            <TouchableOpacity
+                              key={option.value}
+                              style={[
+                                styles.genderOption,
+                                formData.gender === option.value && styles.genderOptionSelected,
+                                index === GENDER_OPTIONS.length - 1 && styles.lastOption
+                              ]}
+                              onPress={() => {
+                                setFormData({ ...formData, gender: option.value });
+                                setShowGenderPicker(false);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.genderOptionText,
+                                  formData.gender === option.value && styles.genderOptionTextSelected,
+                                ]}
+                              >
+                                {option.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+
+                    <Input
+                      ref={ageRef}
+                      icon="calendar"
+                      placeholder="Age"
+                      value={formData.age}
+                      onChangeText={(text) => setFormData({ ...formData, age: text })}
+                      keyboardType="number-pad"
+                      returnKeyType="next"
+                      onSubmitEditing={() => gradeRef?.current?.focus()}
+                      blurOnSubmit={false}
+                    />
+
+                    <Input
+                      ref={gradeRef}
+                      icon="school"
+                      placeholder="Grade/Year"
+                      value={formData.grade}
+                      onChangeText={(text) => setFormData({ ...formData, grade: text })}
+                      returnKeyType="next"
+                      onSubmitEditing={() => emailRef?.current?.focus()}
+                      blurOnSubmit={false}
+                    />
+                  </>
+                )}
+
                 <Input
                   ref={emailRef}
-                  icon="person"
-                  placeholder="Full Name"
-                  value={formData.fullName}
-                  onChangeText={(text) => setFormData({ ...formData, fullName: text })}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                  onSubmitEditing={() => usernameRef?.current?.focus()}
-                  blurOnSubmit={false}
-                />
-
-                <Input
-                  ref={usernameRef}
-                  icon="at"
-                  placeholder="Username"
-                  value={formData.username}
-                  onChangeText={(text) => setFormData({ ...formData, username: text })}
+                  icon="mail"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChangeText={(text) => setFormData({ ...formData, email: text })}
+                  keyboardType="email-address"
                   autoCapitalize="none"
                   returnKeyType="next"
-                  onSubmitEditing={() => handleGenderPress()}
+                  onSubmitEditing={() => passwordRef?.current?.focus()}
                   blurOnSubmit={false}
+                  error={error}
                 />
 
-                <View style={styles.dropdownContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.inputContainer,
-                      showGenderPicker && {
-                        borderBottomLeftRadius: 0,
-                        borderBottomRightRadius: 0,
-                        borderBottomWidth: 0,
-                        borderBottomColor: 'transparent',
-                        marginBottom: 0,
-                      }
-                    ]}
-                    onPress={() => setShowGenderPicker(!showGenderPicker)}
-                  >
-                    <Ionicons name="male-female" size={20} color={colors.textSecondary} />
-                    <Text
+                <Input
+                  ref={passwordRef}
+                  icon="lock-closed"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChangeText={(text) => setFormData({ ...formData, password: text })}
+                  secureTextEntry
+                  returnKeyType={isLogin ? "go" : "next"}
+                  onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
+                  blurOnSubmit={isLogin}
+                  error={error}
+                />
+
+                {!isLogin && (
+                  <Input
+                    ref={confirmPasswordRef}
+                    icon="lock-closed"
+                    placeholder="Confirm Password"
+                    value={formData.confirmPassword}
+                    onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+                    secureTextEntry
+                    returnKeyType="go"
+                    onSubmitEditing={handleSubmit}
+                    error={error}
+                  />
+                )}
+              </View>
+            </View>
+
+            <View style={styles.buttonSection}>
+              <button
+                type="submit"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: colors.background,
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  borderRadius: borderRadius.lg,
+                  border: 'none',
+                  width: '100%',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: loading ? 0.7 : 1,
+                }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.background} />
+                ) : (
+                  isLogin ? 'Sign In' : 'Sign Up'
+                )}
+              </button>
+
+              <TouchableOpacity
+                style={styles.toggleButton}
+                onPress={toggleMode}
+              >
+                <Text style={styles.toggleText}>
+                  {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+                </Text>
+              </TouchableOpacity>
+
+              {isLogin && (
+                <TouchableOpacity
+                  style={styles.forgotButton}
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                >
+                  <Text style={styles.forgotText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </ScrollView>
+        </form>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          bounces={false}
+        >
+          <View>
+            <View style={styles.header}>
+              <Ionicons name="school" size={60} color={colors.primary} />
+              <Text style={styles.title}>Space Learn</Text>
+              <Text style={styles.subtitle}>
+                {isLogin ? 'Welcome back!' : 'Create your account'}
+              </Text>
+            </View>
+
+            <View style={styles.inputSection}>
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              {!isLogin && (
+                <>
+                  <Input
+                    ref={emailRef}
+                    icon="person"
+                    placeholder="Full Name"
+                    value={formData.fullName}
+                    onChangeText={(text) => setFormData({ ...formData, fullName: text })}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    onSubmitEditing={() => usernameRef?.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+
+                  <Input
+                    ref={usernameRef}
+                    icon="at"
+                    placeholder="Username"
+                    value={formData.username}
+                    onChangeText={(text) => setFormData({ ...formData, username: text })}
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                    onSubmitEditing={() => handleGenderPress()}
+                    blurOnSubmit={false}
+                  />
+
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
                       style={[
-                        styles.input,
-                        !formData.gender && styles.placeholderText,
+                        styles.inputContainer,
+                        showGenderPicker && {
+                          borderBottomLeftRadius: 0,
+                          borderBottomRightRadius: 0,
+                          borderBottomWidth: 0,
+                          borderBottomColor: 'transparent',
+                          marginBottom: 0,
+                        }
                       ]}
+                      onPress={() => setShowGenderPicker(!showGenderPicker)}
                     >
-                      {formData.gender
-                        ? GENDER_OPTIONS.find(option => option.value === formData.gender)?.label
-                        : 'Select Gender'}
-                    </Text>
-                    <Ionicons 
-                      name={showGenderPicker ? "chevron-up" : "chevron-down"} 
-                      size={20} 
-                      color={colors.textSecondary} 
-                    />
-                  </TouchableOpacity>
-                  {showGenderPicker && (
-                    <View style={styles.dropdownList}>
-                      {GENDER_OPTIONS.map((option, index) => (
-                        <TouchableOpacity
-                          key={option.value}
-                          style={[
-                            styles.genderOption,
-                            formData.gender === option.value && styles.genderOptionSelected,
-                            index === GENDER_OPTIONS.length - 1 && styles.lastOption
-                          ]}
-                          onPress={() => {
-                            setFormData({ ...formData, gender: option.value });
-                            setShowGenderPicker(false);
-                          }}
-                        >
-                          <Text
+                      <Ionicons name="male-female" size={20} color={colors.textSecondary} />
+                      <Text
+                        style={[
+                          styles.input,
+                          !formData.gender && styles.placeholderText,
+                        ]}
+                      >
+                        {formData.gender
+                          ? GENDER_OPTIONS.find(option => option.value === formData.gender)?.label
+                          : 'Select Gender'}
+                      </Text>
+                      <Ionicons 
+                        name={showGenderPicker ? "chevron-up" : "chevron-down"} 
+                        size={20} 
+                        color={colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                    {showGenderPicker && (
+                      <View style={styles.dropdownList}>
+                        {GENDER_OPTIONS.map((option, index) => (
+                          <TouchableOpacity
+                            key={option.value}
                             style={[
-                              styles.genderOptionText,
-                              formData.gender === option.value && styles.genderOptionTextSelected,
+                              styles.genderOption,
+                              formData.gender === option.value && styles.genderOptionSelected,
+                              index === GENDER_OPTIONS.length - 1 && styles.lastOption
                             ]}
+                            onPress={() => {
+                              setFormData({ ...formData, gender: option.value });
+                              setShowGenderPicker(false);
+                            }}
                           >
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
+                            <Text
+                              style={[
+                                styles.genderOptionText,
+                                formData.gender === option.value && styles.genderOptionTextSelected,
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
 
-                <Input
-                  ref={ageRef}
-                  icon="calendar"
-                  placeholder="Age"
-                  value={formData.age}
-                  onChangeText={(text) => setFormData({ ...formData, age: text })}
-                  keyboardType="number-pad"
-                  returnKeyType="next"
-                  onSubmitEditing={() => gradeRef?.current?.focus()}
-                  blurOnSubmit={false}
-                />
+                  <Input
+                    ref={ageRef}
+                    icon="calendar"
+                    placeholder="Age"
+                    value={formData.age}
+                    onChangeText={(text) => setFormData({ ...formData, age: text })}
+                    keyboardType="number-pad"
+                    returnKeyType="next"
+                    onSubmitEditing={() => gradeRef?.current?.focus()}
+                    blurOnSubmit={false}
+                  />
 
-                <Input
-                  ref={gradeRef}
-                  icon="school"
-                  placeholder="Grade/Year"
-                  value={formData.grade}
-                  onChangeText={(text) => setFormData({ ...formData, grade: text })}
-                  returnKeyType="next"
-                  onSubmitEditing={() => emailRef?.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              </>
-            )}
+                  <Input
+                    ref={gradeRef}
+                    icon="school"
+                    placeholder="Grade/Year"
+                    value={formData.grade}
+                    onChangeText={(text) => setFormData({ ...formData, grade: text })}
+                    returnKeyType="next"
+                    onSubmitEditing={() => emailRef?.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                </>
+              )}
 
-            <Input
-              ref={emailRef}
-              icon="mail"
-              placeholder="Email"
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef?.current?.focus()}
-              blurOnSubmit={false}
-              error={error}
-            />
-
-            <Input
-              ref={passwordRef}
-              icon="lock-closed"
-              placeholder="Password"
-              value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
-              secureTextEntry
-              returnKeyType={isLogin ? "go" : "next"}
-              onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
-              blurOnSubmit={isLogin}
-              error={error}
-            />
-
-            {!isLogin && (
               <Input
-                ref={confirmPasswordRef}
-                icon="lock-closed"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-                secureTextEntry
-                returnKeyType="go"
-                onSubmitEditing={handleSubmit}
+                ref={emailRef}
+                icon="mail"
+                placeholder="Email"
+                value={formData.email}
+                onChangeText={(text) => setFormData({ ...formData, email: text })}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef?.current?.focus()}
+                blurOnSubmit={false}
                 error={error}
               />
+
+              <Input
+                ref={passwordRef}
+                icon="lock-closed"
+                placeholder="Password"
+                value={formData.password}
+                onChangeText={(text) => setFormData({ ...formData, password: text })}
+                secureTextEntry
+                returnKeyType={isLogin ? "go" : "next"}
+                onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
+                blurOnSubmit={isLogin}
+                error={error}
+              />
+
+              {!isLogin && (
+                <Input
+                  ref={confirmPasswordRef}
+                  icon="lock-closed"
+                  placeholder="Confirm Password"
+                  value={formData.confirmPassword}
+                  onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+                  secureTextEntry
+                  returnKeyType="go"
+                  onSubmitEditing={handleSubmit}
+                  error={error}
+                />
+              )}
+            </View>
+          </View>
+
+          <View style={styles.buttonSection}>
+            <Button
+              title={loading ? '' : (isLogin ? 'Sign In' : 'Sign Up')}
+              onPress={handleSubmit}
+              disabled={loading}
+              style={styles.submitButton}
+            >
+              {loading && <ActivityIndicator color={colors.background} />}
+            </Button>
+
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={toggleMode}
+            >
+              <Text style={styles.toggleText}>
+                {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+              </Text>
+            </TouchableOpacity>
+
+            {isLogin && (
+              <TouchableOpacity
+                style={styles.forgotButton}
+                onPress={() => navigation.navigate('ForgotPassword')}
+              >
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
             )}
           </View>
-        </View>
-
-        <View style={styles.buttonSection}>
-          <Button
-            title={loading ? '' : (isLogin ? 'Sign In' : 'Sign Up')}
-            onPress={handleSubmit}
-            disabled={loading}
-            style={styles.submitButton}
-          >
-            {loading && <ActivityIndicator color={colors.background} />}
-          </Button>
-
-          <TouchableOpacity
-            style={styles.toggleButton}
-            onPress={toggleMode}
-          >
-            <Text style={styles.toggleText}>
-              {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-            </Text>
-          </TouchableOpacity>
-
-          {isLogin && (
-            <TouchableOpacity
-              style={styles.forgotButton}
-              onPress={() => navigation.navigate('ForgotPassword')}
-            >
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </KeyboardAwareView>
   );
 };

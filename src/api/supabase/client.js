@@ -10,56 +10,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
 
-// Initialize session state
-let cachedSession = null;
-
-// Clear any stale sessions in web localStorage
-if (Platform.OS === 'web') {
-  try {
-    // Clear any old session format
-    localStorage.removeItem('supabase.auth.token');
-    
-    const existingSession = localStorage.getItem('sb-session');
-    if (existingSession) {
-      const sessionData = JSON.parse(existingSession);
-      if (sessionData?.expires_at) {
-        const expiryDate = new Date(sessionData.expires_at * 1000);
-        if (expiryDate < new Date()) {
-          console.log('Clearing expired session from localStorage');
-          localStorage.removeItem('sb-session');
-        } else {
-          cachedSession = sessionData;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn('Error checking session expiry:', error);
-    localStorage.removeItem('sb-session');
-  }
-}
-
 const supabaseConfig = {
   auth: {
     storage: Platform.OS === 'web' ? localStorage : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'implicit',
-    debug: true,
-    // Add event listeners for auth state changes
-    onAuthStateChange: (event, session) => {
-      console.log('Auth state changed:', event, session ? 'Has session' : 'No session');
-      cachedSession = session;
-      
-      if (Platform.OS === 'web') {
-        // Update our cached session
-        if (session) {
-          localStorage.setItem('sb-session', JSON.stringify(session));
-        } else {
-          localStorage.removeItem('sb-session');
-        }
-      }
-    }
+    detectSessionInUrl: Platform.OS === 'web',
+    flowType: 'pkce',
+    debug: __DEV__,
+    storageKey: `sb-${supabaseUrl}-auth-token`,
   },
 };
 
@@ -68,23 +27,15 @@ console.log('Initializing Supabase with:', {
   hasAnonKey: !!supabaseAnonKey,
   platform: Platform.OS,
   storage: Platform.OS === 'web' ? 'localStorage' : 'AsyncStorage',
-  hasExistingSession: !!cachedSession
+  flowType: supabaseConfig.auth.flowType,
 });
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseConfig);
 
-// Enhanced session management with caching
+// Enhanced session management
 export const getValidSession = async () => {
   try {
-    // First check our cached session
-    if (cachedSession) {
-      const expiryDate = new Date(cachedSession.expires_at * 1000);
-      if (expiryDate > new Date()) {
-        return cachedSession;
-      }
-      cachedSession = null;
-    }
-
+    console.log('Getting valid session...');
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -105,12 +56,32 @@ export const getValidSession = async () => {
       return null;
     }
 
-    // Cache the valid session
-    cachedSession = session;
+    console.log('Valid session found');
     return session;
   } catch (error) {
     console.error('Unexpected error in getValidSession:', error);
     return null;
+  }
+};
+
+// Enhanced sign out
+export const signOut = async () => {
+  try {
+    console.log('Signing out...');
+    
+    // Clear any stored session data first
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(supabaseConfig.auth.storageKey);
+    } else {
+      await AsyncStorage.removeItem(supabaseConfig.auth.storageKey);
+    }
+    
+    // Then sign out from Supabase
+    await supabase.auth.signOut();
+    console.log('Sign out successful');
+  } catch (error) {
+    console.error('Error signing out:', error);
+    throw error;
   }
 };
 
@@ -166,8 +137,8 @@ export const getCurrentUser = async () => {
     }
 
     // If we have a cached session, we can use its user
-    if (cachedSession?.user) {
-      return cachedSession.user;
+    if (session?.user) {
+      return session.user;
     }
 
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -199,41 +170,5 @@ export const getCurrentUser = async () => {
       stack: error.stack
     });
     return null;
-  }
-};
-
-// Enhanced sign out with complete cleanup
-export const signOut = async () => {
-  try {
-    console.log('Signing out user...');
-    
-    // Clear cached session
-    cachedSession = null;
-    
-    // Clear all storage
-    if (Platform.OS === 'web') {
-      localStorage.removeItem('sb-session');
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('supabase.auth.expires_at');
-    }
-    
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('Error in signOut:', {
-        message: error.message,
-        status: error.status,
-        code: error.code
-      });
-      throw error;
-    }
-    
-    console.log('User signed out successfully');
-  } catch (error) {
-    console.error('Unexpected error in signOut:', {
-      message: error.message,
-      stack: error.stack
-    });
-    throw error;
   }
 }; 
