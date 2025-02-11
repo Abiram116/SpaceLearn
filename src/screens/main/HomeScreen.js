@@ -20,6 +20,7 @@ import { subjectService } from '../../services/subjectService';
 import { userService } from '../../services/userService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
+import AnimatedView from '../../components/common/AnimatedView';
 
 const DayStreak = ({ day, isActive }) => (
   <View style={[styles.dayStreak, isActive && styles.dayStreakActive]}>
@@ -115,6 +116,9 @@ const HomeScreen = ({ navigation }) => {
 
   console.log('User data:', user);
 
+  const headerHeight = 44;
+  const totalHeaderHeight = insets.top + headerHeight;
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -122,9 +126,6 @@ const HomeScreen = ({ navigation }) => {
       </View>
     );
   }
-
-  const headerHeight = 44;
-  const totalHeaderHeight = insets.top + headerHeight;
 
   return (
     <View style={styles.container}>
@@ -154,90 +155,93 @@ const HomeScreen = ({ navigation }) => {
           paddingBottom: spacing.lg
         }
       ]}>
-        <View style={[styles.welcomeContainer, { marginTop: 0 }]}>
-          <Text style={[
-            styles.userName,
-            { 
-              lineHeight: 56,
-              includeFontPadding: false,
-              textAlignVertical: 'center'
-            }
-          ]}>
-            {userProfile?.username || userProfile?.full_name || 'User'}
-          </Text>
-        </View>
-
-        <View style={styles.streakContainer}>
-          <View style={styles.streakInfo}>
-            <View style={styles.streakIconContainer}>
-              <Ionicons name="flame" size={28} color={colors.primary} />
-            </View>
-            <View style={styles.streakTextContainer}>
-              <Text style={styles.streakCount}>{streak}</Text>
-              <Text style={styles.streakLabel}>Days Streak!</Text>
-            </View>
+        <AnimatedView animation="fade">
+          <View style={[styles.welcomeContainer, { marginTop: 0 }]}>
+            <Text style={[
+              styles.userName,
+              { 
+                lineHeight: 56,
+                includeFontPadding: false,
+                textAlignVertical: 'center'
+              }
+            ]}>
+              {userProfile?.username || userProfile?.full_name || 'User'}
+            </Text>
           </View>
-          <Text style={styles.streakSubtext}>Keep learning to maintain your streak</Text>
-        </View>
+        </AnimatedView>
+
+        <AnimatedView animation="slide" delay={200}>
+          <View style={styles.streakContainer}>
+            <View style={styles.streakInfo}>
+              <View style={styles.streakIconContainer}>
+                <Ionicons name="flame" size={28} color={colors.primary} />
+              </View>
+              <View style={styles.streakTextContainer}>
+                <Text style={styles.streakCount}>{streak}</Text>
+                <Text style={styles.streakLabel}>Days Streak!</Text>
+              </View>
+            </View>
+            <Text style={styles.streakSubtext}>Keep learning to maintain your streak</Text>
+          </View>
+        </AnimatedView>
 
         {continueLearning && (
-          <View style={styles.continueContainer}>
-            <Text style={styles.sectionTitle}>Continue Learning</Text>
-            <TouchableOpacity
-              style={styles.continueCard}
-              onPress={() => navigation.navigate('Subspace', {
-                subjectId: continueLearning.subject_id,
-                subspaceId: continueLearning.id,
-              })}
-            >
-              <View style={styles.continueContent}>
-                <Text style={styles.continueTitle}>{continueLearning.name}</Text>
-                <Text style={styles.continueSubtitle}>Continue where you left off</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <AnimatedView animation="slide" delay={400}>
+            <View style={styles.continueContainer}>
+              <Text style={styles.sectionTitle}>Continue Learning</Text>
+              <TouchableOpacity
+                style={styles.continueCard}
+                onPress={() => navigation.navigate('Subspace', {
+                  subjectId: continueLearning.subject_id,
+                  subspaceId: continueLearning.id,
+                })}
+              >
+                <View style={styles.continueContent}>
+                  <Text style={styles.continueTitle}>{continueLearning.name}</Text>
+                  <Text style={styles.continueSubtitle}>Continue where you left off</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </AnimatedView>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {recentActivities.length > 0 ? (
-            <View style={styles.activitiesContainer}>
-              {recentActivities.slice(0, 3).map((activity) => (
-                <TouchableOpacity
-                  key={activity.id}
-                  style={styles.activityItem}
-                  onPress={() => navigation.navigate('Subspace', {
-                    subjectId: activity.subject_id,
-                    subspaceId: activity.subspace_id,
-                  })}
-                >
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle} numberOfLines={1}>
-                      {activity.subject?.name}
-                    </Text>
-                    <Text style={styles.activitySubtitle} numberOfLines={1}>
-                      {activity.subspace?.name}
-                    </Text>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: '30%' }]} />
+        <AnimatedView animation="slide" delay={600}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            {recentActivities.length > 0 ? (
+              <View style={styles.activitiesContainer}>
+                {recentActivities.map((activity) => (
+                  <TouchableOpacity
+                    key={activity.id}
+                    style={styles.activityItem}
+                    onPress={() => navigation.navigate('Subspace', {
+                      subjectId: activity.subject_id,
+                      subspaceId: activity.subspace_id,
+                    })}
+                  >
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityTitle} numberOfLines={1}>
+                        {activity.subject?.name}
+                      </Text>
+                      <Text style={styles.activitySubtitle} numberOfLines={1}>
+                        {activity.subspace?.name}
+                      </Text>
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: '30%' }]} />
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyStateContainer}>
-              <Text style={styles.emptyText}>
-                No recent activity. Start learning!
-              </Text>
-              <Button
-                title="Start Learning"
-                onPress={() => navigation.navigate('Subjects')}
-                style={styles.startButton}
-              />
-            </View>
-          )}
-        </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyText}>
+                  No recent activity. Start learning!
+                </Text>
+              </View>
+            )}
+          </View>
+        </AnimatedView>
       </View>
     </View>
   );
@@ -248,10 +252,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
     position: 'absolute',
     top: 0,
@@ -261,6 +261,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+  },
+  welcomeContainer: {
+    marginBottom: spacing.xl,
+  },
+  userName: {
+    ...typography.h1,
+    fontSize: 48,
+    color: colors.primary,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   profileButton: {
     padding: spacing.xs,
@@ -277,19 +290,6 @@ const styles = StyleSheet.create({
         elevation: 3,
       },
     }),
-  },
-  content: {
-    flex: 1,
-  },
-  welcomeContainer: {
-    marginBottom: spacing.xl,
-  },
-  userName: {
-    ...typography.h1,
-    fontSize: 48,
-    color: colors.primary,
-    fontWeight: '700',
-    letterSpacing: -0.5,
   },
   streakContainer: {
     backgroundColor: colors.card,
@@ -429,13 +429,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     textAlign: 'center',
   },
-  startButton: {
-    minWidth: 160,
-    height: 40,
-    borderRadius: borderRadius.lg,
-  },
   continueContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   continueCard: {
     backgroundColor: colors.card,

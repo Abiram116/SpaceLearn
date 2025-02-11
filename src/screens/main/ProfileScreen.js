@@ -16,6 +16,7 @@ import { colors, spacing, typography, shadows, borderRadius, layout } from '../.
 import { userService } from '../../services/userService';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+import AnimatedView from '../../components/common/AnimatedView';
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -134,134 +135,142 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          {user.avatar_url ? (
-            <Image
-              source={{ uri: user.avatar_url }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Ionicons name="person" size={40} color={colors.textSecondary} />
-            </View>
-          )}
-          <TouchableOpacity
-            style={styles.editAvatarButton}
-            onPress={handleEditProfile}
-          >
-            <Ionicons name="camera" size={20} color={colors.background} />
-          </TouchableOpacity>
+      <AnimatedView animation="fade">
+        <View style={styles.header}>
+          <View style={styles.avatarContainer}>
+            {user.avatar_url ? (
+              <Image
+                source={{ uri: user.avatar_url }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Ionicons name="person" size={40} color={colors.textSecondary} />
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.editAvatarButton}
+              onPress={handleEditProfile}
+            >
+              <Ionicons name="camera" size={20} color={colors.background} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.name}>{user.full_name}</Text>
+          <Text style={styles.username}>@{user.username}</Text>
+          {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
         </View>
-        <Text style={styles.name}>{user.full_name}</Text>
-        <Text style={styles.username}>@{user.username}</Text>
-        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
-      </View>
+      </AnimatedView>
 
       <View style={styles.content}>
-        <Card style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <Ionicons name="person" size={24} color={colors.primary} />
+        <AnimatedView animation="slide" delay={200}>
+          <Card style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <Ionicons name="person" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Gender</Text>
+                <Text style={styles.infoValue}>
+                  {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'Not specified'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Gender</Text>
-              <Text style={styles.infoValue}>
-                {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'Not specified'}
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <Ionicons name="calendar" size={24} color={colors.primary} />
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <Ionicons name="calendar" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Age</Text>
+                <Text style={styles.infoValue}>{user.age || 'Not specified'}</Text>
+              </View>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Age</Text>
-              <Text style={styles.infoValue}>{user.age || 'Not specified'}</Text>
-            </View>
-          </View>
 
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <Ionicons name="flame" size={24} color={colors.primary} />
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <Ionicons name="flame" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Learning Streak</Text>
+                <Text style={styles.infoValue}>{user.streak_count} days</Text>
+              </View>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Learning Streak</Text>
-              <Text style={styles.infoValue}>{user.streak_count} days</Text>
-            </View>
-          </View>
 
-          <View style={[styles.infoRow, { marginBottom: 0 }]}>
-            <View style={styles.infoIconContainer}>
-              <Ionicons name="time" size={24} color={colors.primary} />
+            <View style={[styles.infoRow, { marginBottom: 0 }]}>
+              <View style={styles.infoIconContainer}>
+                <Ionicons name="time" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Member Since</Text>
+                <Text style={styles.infoValue}>
+                  {new Date(user.created_at).toLocaleDateString()}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Member Since</Text>
-              <Text style={styles.infoValue}>
-                {new Date(user.created_at).toLocaleDateString()}
-              </Text>
-            </View>
-          </View>
-        </Card>
+          </Card>
+        </AnimatedView>
 
-        <Text style={styles.sectionTitle}>Settings</Text>
-        <Card style={styles.settingsCard}>
+        <AnimatedView animation="slide" delay={400}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <Card style={styles.settingsCard}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={handleEditProfile}
+            >
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconContainer}>
+                  <Ionicons name="person-circle" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.settingText}>Edit Profile</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconContainer}>
+                  <Ionicons name="notifications" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.settingText}>Notifications</Text>
+              </View>
+              <Switch
+                value={preferences?.notification_enabled}
+                onValueChange={handleToggleNotifications}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.background}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.settingRow, { borderBottomWidth: 0 }]}
+              onPress={() => navigation.navigate('ChangePassword')}
+            >
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconContainer}>
+                  <Ionicons name="lock-closed" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.settingText}>Change Password</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </Card>
+        </AnimatedView>
+
+        <AnimatedView animation="slide" delay={600}>
+          <Button
+            title="Sign Out"
+            onPress={handleLogout}
+            style={styles.signOutButton}
+            type="secondary"
+          />
+
           <TouchableOpacity
-            style={styles.settingRow}
-            onPress={handleEditProfile}
+            style={styles.deleteAccountButton}
+            onPress={handleDeleteAccount}
           >
-            <View style={styles.settingLeft}>
-              <View style={styles.settingIconContainer}>
-                <Ionicons name="person-circle" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.settingText}>Edit Profile</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+            <Text style={styles.deleteAccountText}>Delete Account</Text>
           </TouchableOpacity>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <View style={styles.settingIconContainer}>
-                <Ionicons name="notifications" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.settingText}>Notifications</Text>
-            </View>
-            <Switch
-              value={preferences?.notification_enabled}
-              onValueChange={handleToggleNotifications}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.background}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.settingRow, { borderBottomWidth: 0 }]}
-            onPress={() => navigation.navigate('ChangePassword')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={styles.settingIconContainer}>
-                <Ionicons name="lock-closed" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.settingText}>Change Password</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </Card>
-
-        <Button
-          title="Sign Out"
-          onPress={handleLogout}
-          style={styles.signOutButton}
-          type="secondary"
-        />
-
-        <TouchableOpacity
-          style={styles.deleteAccountButton}
-          onPress={handleDeleteAccount}
-        >
-          <Text style={styles.deleteAccountText}>Delete Account</Text>
-        </TouchableOpacity>
+        </AnimatedView>
       </View>
     </ScrollView>
   );

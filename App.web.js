@@ -7,8 +7,21 @@ import { AuthProvider } from './src/context/AuthContext';
 import { linking } from './src/navigation/linking';
 import { Platform, View, Text } from 'react-native';
 
+// Initialize web-specific polyfills and configurations
+if (Platform.OS === 'web') {
+  // Add web-specific polyfills here if needed
+  window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+  });
+}
+
 export default function App() {
   const [error, setError] = useState(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     // Add web-specific styles
@@ -25,16 +38,24 @@ export default function App() {
           }
           * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
           }
           input, button {
             font-family: inherit;
           }
+          #root {
+            display: flex;
+            flex-direction: column;
+          }
         `;
         document.head.appendChild(style);
+        setInitialized(true);
       } catch (err) {
         console.error('Error initializing web styles:', err);
         setError(err.message);
       }
+    } else {
+      setInitialized(true);
     }
   }, []);
 
@@ -45,6 +66,14 @@ export default function App() {
           An error occurred while initializing the app
         </Text>
         <Text style={{ color: 'red', fontSize: 12 }}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!initialized) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
       </View>
     );
   }

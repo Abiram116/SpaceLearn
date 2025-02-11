@@ -43,32 +43,90 @@ const isConsecutiveDay = (lastDate) => {
 export const userService = {
   // Sign up a new user
   signUp: async (userData) => {
-    const { email, password, ...profileData } = userData;
-    
     try {
-      // First, create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+      console.log('Starting signup process with data:', {
+        email: userData.email ? 'provided' : 'missing',
+        password: userData.password ? 'provided' : 'missing',
+        metadata: userData.metadata ? 'provided' : 'missing'
       });
 
-      if (authError) throw authError;
+      // Step 1: Create auth user with minimal data first
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password
+      });
 
-      // Remove grade field if it exists in profileData
-      const { grade, ...cleanProfileData } = profileData;
+      if (signUpError) {
+        console.error('Auth signup error:', signUpError);
+        throw signUpError;
+      }
 
-      // Then, create user profile
-      const response = await supabase
-        .from('users')
-        .insert([{
+      if (!authData?.user) {
+        throw new Error('No user data returned from signup');
+      }
+
+      console.log('Auth user created:', {
+        id: authData.user.id,
+        email: authData.user.email
+      });
+
+      // Step 2: Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: userData.metadata.full_name,
+          username: userData.metadata.username
+        }
+      });
+
+      if (updateError) {
+        console.error('Error updating user metadata:', updateError);
+        // Clean up by signing out
+        await supabase.auth.signOut();
+        throw updateError;
+      }
+
+      // Step 3: Create user profile
+      try {
+        const profileData = {
           id: authData.user.id,
-          email,
-          ...cleanProfileData,
-        }])
-        .select()
-        .single();
+          email: userData.email.toLowerCase(),
+          username: userData.metadata.username,
+          full_name: userData.metadata.full_name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          streak_count: 0,
+          last_activity_date: new Date().toISOString(),
+          bio: '',
+          avatar_url: '',
+          gender: userData.metadata.gender || null,
+          age: userData.metadata.age || null
+        };
 
-      return handleResponse(response);
+        console.log('Creating user profile:', { ...profileData, id: 'HIDDEN' });
+
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .insert([profileData])
+          .select()
+          .single();
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Clean up by signing out
+          await supabase.auth.signOut();
+          throw profileError;
+        }
+
+        console.log('User profile created successfully');
+        return { data: { user: authData.user, profile } };
+
+      } catch (profileError) {
+        console.error('Error creating user profile:', profileError);
+        // Clean up by signing out
+        await supabase.auth.signOut();
+        throw new Error('Failed to create user profile');
+      }
+
     } catch (error) {
       console.error('Error in signUp:', error);
       throw error;

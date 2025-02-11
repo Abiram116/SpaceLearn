@@ -6,31 +6,89 @@ import { Platform } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+console.log('Environment variables:', {
+  hasUrl: !!supabaseUrl,
+  hasAnonKey: !!supabaseAnonKey,
+  url: supabaseUrl?.substring(0, 30) + '...',  // Log partial URL for verification
+});
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
 
-const supabaseConfig = {
-  auth: {
-    storage: Platform.OS === 'web' ? localStorage : AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
-    flowType: 'pkce',
-    debug: __DEV__,
-    storageKey: `sb-${supabaseUrl}-auth-token`,
+// Create a custom storage implementation
+const ExpoStorage = {
+  getItem: (key) => {
+    console.log('Getting storage item:', key);
+    return Platform.OS === 'web' 
+      ? localStorage.getItem(key)
+      : AsyncStorage.getItem(key);
+  },
+  setItem: (key, value) => {
+    console.log('Setting storage item:', key);
+    return Platform.OS === 'web'
+      ? localStorage.setItem(key, value)
+      : AsyncStorage.setItem(key, value);
+  },
+  removeItem: (key) => {
+    console.log('Removing storage item:', key);
+    return Platform.OS === 'web'
+      ? localStorage.removeItem(key)
+      : AsyncStorage.removeItem(key);
   },
 };
 
-console.log('Initializing Supabase with:', {
-  url: supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
+// Simplified config
+const supabaseConfig = {
+  auth: {
+    storage: ExpoStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+};
+
+console.log('Creating Supabase client with config:', {
   platform: Platform.OS,
   storage: Platform.OS === 'web' ? 'localStorage' : 'AsyncStorage',
-  flowType: supabaseConfig.auth.flowType,
+  ...supabaseConfig.auth
 });
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseConfig);
+// Create the Supabase client
+let supabase;
+
+try {
+  supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseConfig);
+  
+  // Test the connection
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Auth state changed:', { event, hasSession: !!session });
+  });
+
+  // Verify the client is working
+  supabase.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      console.error('Error getting session:', error);
+    } else {
+      console.log('Supabase client initialized successfully');
+    }
+  });
+
+} catch (error) {
+  console.error('Error creating Supabase client:', error);
+  throw error;
+}
+
+export { supabase };
+
+// Helper function to handle responses
+export const handleResponse = (response) => {
+  if (response.error) {
+    console.error('Supabase response error:', response.error);
+    throw new Error(response.error.message || 'An unexpected error occurred');
+  }
+  return response.data;
+};
 
 // Enhanced session management
 export const getValidSession = async () => {
@@ -107,21 +165,6 @@ export const handleError = (error) => {
     return error.hint;
   }
   return 'An unexpected error occurred';
-};
-
-// Enhanced response handling
-export const handleResponse = (response) => {
-  if (response.error) {
-    console.error('Supabase response error:', response.error);
-    throw new Error(handleError(response.error));
-  }
-  
-  if (!response.data && response.error === null) {
-    console.warn('Supabase response has no data but also no error');
-    return null;
-  }
-  
-  return response.data;
 };
 
 // Get current user with enhanced session validation and caching

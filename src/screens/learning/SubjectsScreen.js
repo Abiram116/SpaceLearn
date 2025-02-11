@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button as WebButton } from 'react-native';
 import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
 import { Input } from '../../components/common/Input';
+import AnimatedView from '../../components/common/AnimatedView';
 
 const SubjectsScreen = ({ navigation }) => {
   const [subjects, setSubjects] = useState([]);
@@ -217,90 +218,92 @@ const SubjectsScreen = ({ navigation }) => {
     });
   };
 
-  const renderSubject = ({ item }) => (
-    <Card style={styles.subjectCard}>
-      <View style={styles.subjectHeader}>
-        {editingSubject?.id === item.id ? (
-          <TextInput
-            ref={inputRef}
-            style={styles.editInput}
-            value={editingSubject.name}
-            onChangeText={(text) => setEditingSubject({ ...editingSubject, name: text })}
-            onBlur={() => handleUpdateSubject(item.id, editingSubject.name)}
-            autoFocus
-          />
-        ) : (
-          <TouchableOpacity 
-            style={styles.subjectTitle}
-            onPress={() => {
-              setExpandedSubject(expandedSubject === item.id ? null : item.id);
-              if (!subspaces[item.id]) {
-                loadSubspaces(item.id);
-              }
-            }}
-          >
-            <Ionicons
-              name={expandedSubject === item.id ? 'chevron-down' : 'chevron-forward'}
-              size={24}
-              color={colors.primary}
+  const renderSubject = ({ item, index }) => (
+    <AnimatedView animation="slide" delay={index * 100}>
+      <Card style={styles.subjectCard}>
+        <View style={styles.subjectHeader}>
+          {editingSubject?.id === item.id ? (
+            <TextInput
+              ref={inputRef}
+              style={styles.editInput}
+              value={editingSubject.name}
+              onChangeText={(text) => setEditingSubject({ ...editingSubject, name: text })}
+              onBlur={() => handleUpdateSubject(item.id, editingSubject.name)}
+              autoFocus
             />
-            <Text style={styles.subjectName}>{item.name}</Text>
-          </TouchableOpacity>
-        )}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            onPress={() => setEditingSubject({ id: item.id, name: item.name })}
-            style={styles.actionButton}
-          >
-            <Ionicons name="pencil" size={20} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDeleteSubject(item.id)}
-            style={styles.actionButton}
-          >
-            <Ionicons name="trash" size={20} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {expandedSubject === item.id && (
-        <View style={styles.subspacesContainer}>
-          {loadingSubspaces[item.id] ? (
-            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <>
-              {subspaces[item.id]?.map(subspace => (
-                <TouchableOpacity
-                  key={subspace.id}
-                  style={styles.subspaceItem}
-                  onPress={() => handleSubspacePress(subspace, item)}
-                >
-                  <Text style={styles.subspaceName}>{subspace.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </>
+            <TouchableOpacity 
+              style={styles.subjectTitle}
+              onPress={() => {
+                setExpandedSubject(expandedSubject === item.id ? null : item.id);
+                if (!subspaces[item.id]) {
+                  loadSubspaces(item.id);
+                }
+              }}
+            >
+              <Ionicons
+                name={expandedSubject === item.id ? 'chevron-down' : 'chevron-forward'}
+                size={24}
+                color={colors.primary}
+              />
+              <Text style={styles.subjectName}>{item.name}</Text>
+            </TouchableOpacity>
           )}
-          <View style={styles.addSubspaceContainer}>
-            <Input
-              ref={subspaceInputRef}
-              icon="bookmark-outline"
-              placeholder="New subspace name"
-              value={newSubspaceName}
-              onChangeText={setNewSubspaceName}
-              onSubmitEditing={() => handleCreateSubspace(item.id)}
-              returnKeyType="done"
-              containerStyle={styles.subspaceInput}
-            />
-            <Button
-              title="Add"
-              onPress={() => handleCreateSubspace(item.id)}
-              variant="outline"
-              size="small"
-            />
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              onPress={() => setEditingSubject({ id: item.id, name: item.name })}
+              style={styles.actionButton}
+            >
+              <Ionicons name="pencil" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleDeleteSubject(item.id)}
+              style={styles.actionButton}
+            >
+              <Ionicons name="trash" size={20} color={colors.error} />
+            </TouchableOpacity>
           </View>
         </View>
-      )}
-    </Card>
+
+        {expandedSubject === item.id && (
+          <View style={styles.subspacesContainer}>
+            {loadingSubspaces[item.id] ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                {subspaces[item.id]?.map(subspace => (
+                  <TouchableOpacity
+                    key={subspace.id}
+                    style={styles.subspaceItem}
+                    onPress={() => handleSubspacePress(subspace, item)}
+                  >
+                    <Text style={styles.subspaceName}>{subspace.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+            <View style={styles.addSubspaceContainer}>
+              <Input
+                ref={subspaceInputRef}
+                icon="bookmark-outline"
+                placeholder="New subspace name"
+                value={newSubspaceName}
+                onChangeText={setNewSubspaceName}
+                onSubmitEditing={() => handleCreateSubspace(item.id)}
+                returnKeyType="done"
+                containerStyle={styles.subspaceInput}
+              />
+              <Button
+                title="Add"
+                onPress={() => handleCreateSubspace(item.id)}
+                variant="outline"
+                size="small"
+              />
+            </View>
+          </View>
+        )}
+      </Card>
+    </AnimatedView>
   );
 
   if (loading) {
@@ -314,35 +317,39 @@ const SubjectsScreen = ({ navigation }) => {
   return (
     <KeyboardAwareView>
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}>
-          <Text style={styles.headerTitle}>Your Subjects</Text>
-          <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
-        </View>
+        <AnimatedView animation="fade">
+          <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}>
+            <Text style={styles.headerTitle}>Your Subjects</Text>
+            <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
+          </View>
+        </AnimatedView>
 
-        <View style={styles.inputContainer}>
-          <Input
-            ref={inputRef}
-            icon="library-outline"
-            placeholder="Enter new subject name"
-            value={newSubjectName}
-            onChangeText={setNewSubjectName}
-            onSubmitEditing={handleCreateSubject}
-            returnKeyType="done"
-            blurOnSubmit={true}
-            error={error}
-            containerStyle={styles.newSubjectInput}
-          />
-          <Button
-            title="Create"
-            onPress={handleCreateSubject}
-            disabled={!newSubjectName.trim() || loading}
-            loading={loading}
-            style={styles.createButton}
-          />
-        </View>
+        <AnimatedView animation="slide" delay={200}>
+          <View style={styles.inputContainer}>
+            <Input
+              ref={inputRef}
+              icon="library-outline"
+              placeholder="Enter new subject name"
+              value={newSubjectName}
+              onChangeText={setNewSubjectName}
+              onSubmitEditing={handleCreateSubject}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              error={error}
+              containerStyle={styles.newSubjectInput}
+            />
+            <Button
+              title="Create"
+              onPress={handleCreateSubject}
+              disabled={!newSubjectName.trim() || loading}
+              loading={loading}
+              style={styles.createButton}
+            />
+          </View>
+        </AnimatedView>
 
         {subjects.length === 0 ? (
-          <View style={styles.emptyContainer}>
+          <AnimatedView animation="scale" delay={300} style={styles.emptyContainer}>
             <Ionicons 
               name="library-outline" 
               size={64} 
@@ -353,7 +360,7 @@ const SubjectsScreen = ({ navigation }) => {
             <Text style={styles.emptySubtext}>
               Create your first subject to get started!
             </Text>
-          </View>
+          </AnimatedView>
         ) : (
           <FlatList
             data={subjects}
@@ -372,13 +379,15 @@ const SubjectsScreen = ({ navigation }) => {
       <Modal
         visible={showDeleteModal}
         transparent
-        animationType="none"
+        animationType="fade"
         onRequestClose={() => setShowDeleteModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <AnimatedView animation="scale" style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Confirm Deletion</Text>
-            <Text style={styles.modalMessage}>Are you sure you want to delete this {deleteTarget?.type}?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete this {deleteTarget?.type}?
+            </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 
@@ -394,7 +403,7 @@ const SubjectsScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </AnimatedView>
       </Modal>
     </KeyboardAwareView>
   );
