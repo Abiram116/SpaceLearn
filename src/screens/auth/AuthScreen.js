@@ -56,8 +56,7 @@ if (Platform.OS === 'web') {
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'male' },
   { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
-  { label: 'Prefer not to say', value: 'prefer_not_to_say' },
+  { label: 'Prefer not to say', value: 'prefer_not_to_say' }
 ];
 
 const AuthScreen = ({ navigation }) => {
@@ -72,7 +71,6 @@ const AuthScreen = ({ navigation }) => {
     username: '',
     gender: '',
     age: '',
-    grade: '',
   });
   const [error, setError] = useState('');
   const [genderInputPosition, setGenderInputPosition] = useState(0);
@@ -82,7 +80,6 @@ const AuthScreen = ({ navigation }) => {
   const confirmPasswordRef = useRef(null);
   const usernameRef = useRef(null);
   const ageRef = useRef(null);
-  const gradeRef = useRef(null);
   const genderInputRef = useRef(null);
   const containerRef = useRef(null);
   const headerRef = useRef(null);
@@ -211,11 +208,10 @@ const AuthScreen = ({ navigation }) => {
           username,
           gender,
           age,
-          grade,
         } = formData;
 
         // Validate required fields
-        if (!email || !password || !confirmPassword || !fullName || !username || !gender || !age || !grade) {
+        if (!email || !password || !confirmPassword || !fullName || !username || !gender || !age) {
           setError('Please fill in all fields');
           setLoading(false);
           return;
@@ -245,8 +241,7 @@ const AuthScreen = ({ navigation }) => {
               full_name: fullName.trim(),
               username: username.toLowerCase().trim(),
               gender: gender || null,
-              age: age ? parseInt(age) : null,
-              grade: grade ? grade.trim() : null
+              age: age ? parseInt(age) : null
             }
           };
 
@@ -311,7 +306,6 @@ const AuthScreen = ({ navigation }) => {
             username: '',
             gender: '',
             age: '',
-            grade: '',
           });
         },
       });
@@ -330,7 +324,6 @@ const AuthScreen = ({ navigation }) => {
           username: '',
           gender: '',
           age: '',
-          grade: '',
         });
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -518,17 +511,6 @@ const AuthScreen = ({ navigation }) => {
                     value={formData.age}
                     onChangeText={(text) => setFormData({ ...formData, age: text })}
                     keyboardType="number-pad"
-                    returnKeyType="next"
-                    onSubmitEditing={() => gradeRef?.current?.focus()}
-                    blurOnSubmit={false}
-                  />
-
-                  <Input
-                    ref={gradeRef}
-                    icon="school"
-                    placeholder="Grade/Year"
-                    value={formData.grade}
-                    onChangeText={(text) => setFormData({ ...formData, grade: text })}
                     returnKeyType="next"
                     onSubmitEditing={() => emailRef?.current?.focus()}
                     blurOnSubmit={false}
@@ -769,17 +751,6 @@ const AuthScreen = ({ navigation }) => {
                       value={formData.age}
                       onChangeText={(text) => setFormData({ ...formData, age: text })}
                       keyboardType="number-pad"
-                      returnKeyType="next"
-                      onSubmitEditing={() => gradeRef?.current?.focus()}
-                      blurOnSubmit={false}
-                    />
-
-                    <Input
-                      ref={gradeRef}
-                      icon="school"
-                      placeholder="Grade/Year"
-                      value={formData.grade}
-                      onChangeText={(text) => setFormData({ ...formData, grade: text })}
                       returnKeyType="next"
                       onSubmitEditing={() => emailRef?.current?.focus()}
                       blurOnSubmit={false}

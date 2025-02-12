@@ -187,38 +187,36 @@ CREATE POLICY "Users can delete own chat messages" ON chat_messages
   TO authenticated
   USING (auth.uid() = user_id);
 
--- Add RLS policies
+-- First enable RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subspaces ENABLE ROW LEVEL SECURITY;
-ALTER TABLE learning_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
 DROP POLICY IF EXISTS "Users can view own profile" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
-DROP POLICY IF EXISTS "Users can view own preferences" ON user_preferences;
-DROP POLICY IF EXISTS "Users can update own preferences" ON user_preferences;
-DROP POLICY IF EXISTS "Users can CRUD own subspaces" ON subspaces;
-DROP POLICY IF EXISTS "Users can CRUD own learning sessions" ON learning_sessions;
-DROP POLICY IF EXISTS "Users can CRUD own notes" ON notes;
-DROP POLICY IF EXISTS "Users can CRUD own assignments" ON assignments;
-DROP POLICY IF EXISTS "Users can view own subjects" ON subjects;
-DROP POLICY IF EXISTS "Users can insert own subjects" ON subjects;
-DROP POLICY IF EXISTS "Users can update own subjects" ON subjects;
-DROP POLICY IF EXISTS "Users can delete own subjects" ON subjects;
+DROP POLICY IF EXISTS "Users can delete own profile" ON users;
+DROP POLICY IF EXISTS "Allow trigger function to create users" ON users;
 
--- Create new policies
+-- Create policies for user management
+CREATE POLICY "Allow public profile creation" ON users
+  FOR INSERT
+  TO public
+  WITH CHECK (true);
+
 CREATE POLICY "Users can view own profile" ON users
-  FOR SELECT USING (auth.uid() = id);
+  FOR SELECT 
+  TO authenticated
+  USING (auth.uid() = id);
 
 CREATE POLICY "Users can update own profile" ON users
-  FOR UPDATE USING (auth.uid() = id);
+  FOR UPDATE 
+  TO authenticated
+  USING (auth.uid() = id);
 
 CREATE POLICY "Users can delete own profile" ON users
-  FOR DELETE USING (auth.uid() = id);
+  FOR DELETE 
+  TO authenticated
+  USING (auth.uid() = id);
 
 -- User preferences policies
 CREATE POLICY "Users can view own preferences" ON user_preferences
@@ -280,24 +278,44 @@ CREATE POLICY "Users can CRUD own notes" ON notes
 CREATE POLICY "Users can CRUD own assignments" ON assignments
   FOR ALL USING (auth.uid() = user_id);
 
--- Create or replace functions
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+-- Create or replace the handle_new_user function with full user data
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
 BEGIN
-  INSERT INTO users (id, email, username)
+  INSERT INTO public.users (
+    id,
+    email,
+    username,
+    full_name,
+    gender,
+    age,
+    created_at,
+    updated_at,
+    streak_count,
+    last_activity_date
+  )
   VALUES (
     NEW.id,
     NEW.email,
-    split_part(NEW.email, '@', 1)
+    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    NEW.raw_user_meta_data->>'full_name',
+    (NEW.raw_user_meta_data->>'gender')::gender_type,
+    (NEW.raw_user_meta_data->>'age')::integer,
+    NOW(),
+    NOW(),
+    1,
+    NOW()
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
--- Drop existing trigger if it exists
+-- Ensure the trigger is created
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-
--- Create new trigger
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user(); 
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 

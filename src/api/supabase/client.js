@@ -6,15 +6,16 @@ import { Platform } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log('Environment variables:', {
-  hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
-  url: supabaseUrl?.substring(0, 30) + '...',  // Log partial URL for verification
-});
-
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
+
+console.log('Initializing Supabase with:', {
+  url: supabaseUrl,
+  hasAnonKey: !!supabaseAnonKey,
+  urlLength: supabaseUrl?.length,
+  keyLength: supabaseAnonKey?.length
+});
 
 // Create a custom storage implementation
 const ExpoStorage = {
@@ -38,7 +39,7 @@ const ExpoStorage = {
   },
 };
 
-// Simplified config
+// Enhanced config with better timeout and retries
 const supabaseConfig = {
   auth: {
     storage: ExpoStorage,
@@ -46,12 +47,47 @@ const supabaseConfig = {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  },
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    timeout: 20000
+  },
+  // Add retries for better reliability
+  httpClient: {
+    fetch: async (url, options) => {
+      console.log('Making request to:', url);
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'apikey': supabaseAnonKey,
+          }
+        });
+        console.log('Response status:', response.status);
+        return response;
+      } catch (error) {
+        console.error('Network error details:', {
+          message: error.message,
+          type: error.type,
+          code: error.code,
+          stack: error.stack
+        });
+        throw error;
+      }
+    }
+  }
 };
 
 console.log('Creating Supabase client with config:', {
   platform: Platform.OS,
   storage: Platform.OS === 'web' ? 'localStorage' : 'AsyncStorage',
-  ...supabaseConfig.auth
 });
 
 // Create the Supabase client

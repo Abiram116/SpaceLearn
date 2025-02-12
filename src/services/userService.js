@@ -50,10 +50,18 @@ export const userService = {
         metadata: userData.metadata ? 'provided' : 'missing'
       });
 
-      // Step 1: Create auth user with minimal data first
+      // Step 1: Create auth user with metadata
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: userData.email,
-        password: userData.password
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.metadata.full_name,
+            username: userData.metadata.username,
+            gender: userData.metadata.gender,
+            age: userData.metadata.age
+          }
+        }
       });
 
       if (signUpError) {
@@ -70,20 +78,8 @@ export const userService = {
         email: authData.user.email
       });
 
-      // Step 2: Update user metadata
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          full_name: userData.metadata.full_name,
-          username: userData.metadata.username
-        }
-      });
-
-      if (updateError) {
-        console.error('Error updating user metadata:', updateError);
-        // Clean up by signing out
-        await supabase.auth.signOut();
-        throw updateError;
-      }
+      // Step 2: Wait briefly for auth session to be established
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Step 3: Create user profile
       try {
@@ -94,7 +90,7 @@ export const userService = {
           full_name: userData.metadata.full_name,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          streak_count: 0,
+          streak_count: 1,
           last_activity_date: new Date().toISOString(),
           bio: '',
           avatar_url: '',
@@ -112,7 +108,6 @@ export const userService = {
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          // Clean up by signing out
           await supabase.auth.signOut();
           throw profileError;
         }
@@ -122,7 +117,6 @@ export const userService = {
 
       } catch (profileError) {
         console.error('Error creating user profile:', profileError);
-        // Clean up by signing out
         await supabase.auth.signOut();
         throw new Error('Failed to create user profile');
       }
@@ -329,15 +323,25 @@ export const userService = {
     }
   },
 
-  // Update streak
-  updateStreak: async (userId, currentStreak = 0, lastActivityDate = null) => {
+  // Update streak when user is active
+  updateStreak: async (userId) => {
     try {
       // Get current time in user's timezone
       const now = new Date();
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
       
-      let newStreak = currentStreak;
+      // Get user's current streak info
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('streak_count, last_activity_date')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
+      let newStreak = user.streak_count;
+      const lastActivityDate = user.last_activity_date;
 
       // If it's a new day in user's timezone
       if (isNewDay(lastActivityDate)) {
@@ -348,12 +352,12 @@ export const userService = {
           // Increment streak for consecutive days
           newStreak += 1;
         } else {
-          // Reset streak to 0 if chain is broken (missed a day)
-          newStreak = 0;
+          // Reset streak to 1 if chain is broken (missed a day)
+          newStreak = 1;
         }
 
         // Update the streak and last activity date
-        const response = await supabase
+        const { data, error } = await supabase
           .from('users')
           .update({
             streak_count: newStreak,
@@ -363,12 +367,68 @@ export const userService = {
           .select()
           .single();
 
-        return handleResponse(response);
+        if (error) throw error;
+        return data;
       }
 
-      return { streak_count: currentStreak, last_activity_date: lastActivityDate };
+      return user;
     } catch (error) {
-      console.error('Error in updateStreak:', error);
+      console.error('Error updating streak:', error);
+      throw error;
+    }
+  },
+
+  // Update streak specifically after AI chat interaction
+  updateStreakAfterChat: async (userId) => {
+    try {
+      // Get current time in user's timezone
+      const now = new Date();
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+      
+      // Get user's current streak info
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('streak_count, last_activity_date')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
+      let newStreak = user.streak_count;
+      const lastActivityDate = user.last_activity_date;
+
+      // If it's a new day in user's timezone
+      if (isNewDay(lastActivityDate)) {
+        if (!lastActivityDate) {
+          // First time user starts with 1
+          newStreak = 1;
+        } else if (isConsecutiveDay(lastActivityDate)) {
+          // Increment streak for consecutive days
+          newStreak += 1;
+        } else {
+          // Reset streak to 1 if chain is broken (missed a day)
+          newStreak = 1;
+        }
+
+        // Update the streak and last activity date
+        const { data, error } = await supabase
+          .from('users')
+          .update({
+            streak_count: newStreak,
+            last_activity_date: nowLocal.toISOString(),
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
+      return user;
+    } catch (error) {
+      console.error('Error updating streak after chat:', error);
       throw error;
     }
   },

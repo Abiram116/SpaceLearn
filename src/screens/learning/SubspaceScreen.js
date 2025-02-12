@@ -269,6 +269,8 @@ const SubspaceScreen = ({ route, navigation }) => {
       const currentSubspace = response.find(s => s.id === subspaceId);
       if (currentSubspace) {
         setSubspace(currentSubspace);
+        // Update last accessed timestamp
+        await subjectService.updateLastAccessed(subspaceId);
         navigation.setOptions({ 
           title: currentSubspace.name,
           headerRight: () => (
