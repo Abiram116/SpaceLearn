@@ -14,6 +14,16 @@ export const colors = {
   info: '#2196F3',
   overlay: 'rgba(0, 0, 0, 0.5)',
   ripple: 'rgba(108, 99, 255, 0.1)',
+
+  // Dark mode colors
+  dark: {
+    background: '#1A1A1A',
+    card: '#2A2A2A',
+    text: '#FFFFFF',
+    textSecondary: '#A0A0A0',
+    border: '#404040',
+    primary: '#6C63FF', // Keep primary color same for dark mode
+  },
 };
 
 export const spacing = {

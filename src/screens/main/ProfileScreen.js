@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  useColorScheme
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
@@ -19,9 +20,11 @@ import Button from '../../components/common/Button';
 import AnimatedView from '../../components/common/AnimatedView';
 
 const ProfileScreen = ({ navigation }) => {
+  const systemColorScheme = useColorScheme();
   const [user, setUser] = useState(null);
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
 
   useEffect(() => {
     loadUserProfile();
@@ -34,8 +37,10 @@ const ProfileScreen = ({ navigation }) => {
         setUser(userData);
         setPreferences({
           notification_enabled: true,
+          dark_mode: userData.user_preferences?.[0]?.dark_mode ?? isDarkMode,
           ...userData.user_preferences?.[0]
         });
+        setIsDarkMode(userData.user_preferences?.[0]?.dark_mode ?? isDarkMode);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -44,6 +49,41 @@ const ProfileScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+
+  const handleToggleTheme = async (value) => {
+    if (!user) return;
+    try {
+      await userService.updatePreferences(user.id, {
+        dark_mode: value,
+      });
+      setIsDarkMode(value);
+      setPreferences(prev => ({
+        ...prev,
+        dark_mode: value,
+      }));
+    } catch (error) {
+      console.error('Error updating theme preference:', error);
+      Alert.alert('Error', 'Failed to update theme preference');
+    }
+  };
+
+  const getThemeColors = () => {
+    if (isDarkMode) {
+      return {
+        background: '#1A1A1A',
+        text: '#FFFFFF',
+        textSecondary: '#A0A0A0',
+        card: '#2A2A2A',
+        border: '#404040',
+        primary: colors.primary,
+        primaryLight: 'rgba(66, 133, 244, 0.15)',
+        error: '#FF6B6B',
+      };
+    }
+    return colors;
+  };
+
+  const themeColors = getThemeColors();
 
   const handleLogout = async () => {
     try {
@@ -113,6 +153,88 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: themeColors.background,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: themeColors.background,
+      padding: spacing.xl,
+    },
+    errorText: {
+      ...typography.body,
+      color: themeColors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+    },
+    header: {
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: Platform.OS === 'ios' ? spacing.xxl + layout.statusBarHeight : spacing.xl,
+      paddingBottom: spacing.xl,
+      backgroundColor: themeColors.primary,
+      borderBottomLeftRadius: borderRadius.xl,
+      borderBottomRightRadius: borderRadius.xl,
+      ...shadows.medium,
+    },
+    name: {
+      ...typography.h2,
+      fontSize: 24,
+      color: themeColors.background,
+      marginBottom: spacing.xs,
+      textAlign: 'center',
+    },
+    username: {
+      ...typography.body,
+      color: themeColors.background,
+      opacity: 0.9,
+      marginBottom: spacing.sm,
+      textAlign: 'center',
+    },
+    bio: {
+      ...typography.body,
+      color: themeColors.background,
+      opacity: 0.9,
+      textAlign: 'center',
+      maxWidth: '80%',
+      lineHeight: 20,
+    },
+    infoCard: {
+      padding: spacing.lg,
+      marginBottom: spacing.xl,
+      backgroundColor: themeColors.card,
+    },
+    infoValue: {
+      ...typography.body,
+      color: themeColors.text,
+      fontWeight: '500',
+    },
+    sectionTitle: {
+      ...typography.h3,
+      color: themeColors.text,
+      marginBottom: spacing.md,
+      marginTop: spacing.md,
+    },
+    settingsCard: {
+      marginBottom: spacing.xl,
+      backgroundColor: themeColors.card,
+    },
+    settingText: {
+      ...typography.body,
+      color: themeColors.text,
+    },
+  });
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -134,10 +256,10 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       <AnimatedView animation="fade">
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
+        <View style={dynamicStyles.header}>
+          <View style={dynamicStyles.avatarContainer}>
             {user.avatar_url ? (
               <Image
                 source={{ uri: user.avatar_url }}
@@ -155,54 +277,54 @@ const ProfileScreen = ({ navigation }) => {
               <Ionicons name="camera" size={20} color={colors.background} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>{user.full_name}</Text>
-          <Text style={styles.username}>@{user.username}</Text>
-          {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
+          <Text style={dynamicStyles.name}>{user.full_name}</Text>
+          <Text style={dynamicStyles.username}>@{user.username}</Text>
+          {user.bio && <Text style={dynamicStyles.bio}>{user.bio}</Text>}
         </View>
       </AnimatedView>
 
       <View style={styles.content}>
         <AnimatedView animation="slide" delay={200}>
-          <Card style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
+          <Card style={dynamicStyles.infoCard}>
+            <View style={dynamicStyles.infoRow}>
+              <View style={dynamicStyles.infoIconContainer}>
                 <Ionicons name="person" size={24} color={colors.primary} />
               </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Gender</Text>
-                <Text style={styles.infoValue}>
+              <View style={dynamicStyles.infoContent}>
+                <Text style={dynamicStyles.infoLabel}>Gender</Text>
+                <Text style={dynamicStyles.infoValue}>
                   {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'Not specified'}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
+            <View style={dynamicStyles.infoRow}>
+              <View style={dynamicStyles.infoIconContainer}>
                 <Ionicons name="calendar" size={24} color={colors.primary} />
               </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Age</Text>
-                <Text style={styles.infoValue}>{user.age || 'Not specified'}</Text>
+              <View style={dynamicStyles.infoContent}>
+                <Text style={dynamicStyles.infoLabel}>Age</Text>
+                <Text style={dynamicStyles.infoValue}>{user.age || 'Not specified'}</Text>
               </View>
             </View>
 
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
+            <View style={dynamicStyles.infoRow}>
+              <View style={dynamicStyles.infoIconContainer}>
                 <Ionicons name="flame" size={24} color={colors.primary} />
               </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Learning Streak</Text>
-                <Text style={styles.infoValue}>{user.streak_count} days</Text>
+              <View style={dynamicStyles.infoContent}>
+                <Text style={dynamicStyles.infoLabel}>Learning Streak</Text>
+                <Text style={dynamicStyles.infoValue}>{user.streak_count} days</Text>
               </View>
             </View>
 
-            <View style={[styles.infoRow, { marginBottom: 0 }]}>
-              <View style={styles.infoIconContainer}>
+            <View style={[dynamicStyles.infoRow, { marginBottom: 0 }]}>
+              <View style={dynamicStyles.infoIconContainer}>
                 <Ionicons name="time" size={24} color={colors.primary} />
               </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Member Since</Text>
-                <Text style={styles.infoValue}>
+              <View style={dynamicStyles.infoContent}>
+                <Text style={dynamicStyles.infoLabel}>Member Since</Text>
+                <Text style={dynamicStyles.infoValue}>
                   {new Date(user.created_at).toLocaleDateString()}
                 </Text>
               </View>
@@ -211,21 +333,40 @@ const ProfileScreen = ({ navigation }) => {
         </AnimatedView>
 
         <AnimatedView animation="slide" delay={400}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <Card style={styles.settingsCard}>
+          <Text style={dynamicStyles.sectionTitle}>Settings</Text>
+          <Card style={dynamicStyles.settingsCard}>
             <TouchableOpacity
-              style={styles.settingRow}
+              style={dynamicStyles.settingRow}
               onPress={handleEditProfile}
             >
-              <View style={styles.settingLeft}>
-                <View style={styles.settingIconContainer}>
+              <View style={dynamicStyles.settingLeft}>
+                <View style={dynamicStyles.settingIconContainer}>
                   <Ionicons name="person-circle" size={24} color={colors.primary} />
                 </View>
-                <Text style={styles.settingText}>Edit Profile</Text>
+                <Text style={dynamicStyles.settingText}>Edit Profile</Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
-
+            
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconContainer}>
+                  <Ionicons 
+                    name={isDarkMode ? "moon" : "sunny"} 
+                    size={24} 
+                    color={themeColors.primary} 
+                  />
+                </View>
+                <Text style={dynamicStyles.settingText}>Dark Mode</Text>
+              </View>
+              <Switch
+                value={isDarkMode}
+                onValueChange={handleToggleTheme}
+                trackColor={{ false: themeColors.border, true: themeColors.primary }}
+                thumbColor={themeColors.background}
+              />
+            </View>
+            
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <View style={styles.settingIconContainer}>
@@ -446,4 +587,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfileScreen; 
+export default ProfileScreen;
