@@ -247,18 +247,24 @@ const SubspaceScreen = ({ route, navigation }) => {
   const [error, setError] = useState(null);
   const [subspace, setSubspace] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
+  const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const scrollViewRef = useRef();
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    console.log('Received parameters:', { subjectId, subspaceId });
+
     if (!subjectId || !subspaceId) {
+      console.error('Invalid subspace parameters:', { subjectId, subspaceId });
       setError('Invalid subspace parameters');
       setLoading(false);
       return;
     }
+
+    console.log('Loading subspace and messages for:', { subjectId, subspaceId });
     loadSubspace();
     loadMessages();
   }, [subjectId, subspaceId]);
@@ -283,11 +289,11 @@ const SubspaceScreen = ({ route, navigation }) => {
           ),
         });
       } else {
-        setError('Subspace not found');
+        setSubspace({ name: 'Unknown Subspace' }); // Fallback subspace
       }
     } catch (error) {
       console.error('Error loading subspace:', error);
-      setError('Failed to load subspace');
+      setSubspace({ name: 'Unknown Subspace' }); // Fallback subspace
     } finally {
       setLoading(false);
     }
@@ -304,6 +310,8 @@ const SubspaceScreen = ({ route, navigation }) => {
         .range(older ? messages.length : 0, older ? messages.length + 19 : 19);
 
       if (error) throw error;
+
+      console.log('Loaded messages:', messages);
 
       if (messages.length < 20) {
         setHasMore(false);
@@ -328,14 +336,14 @@ const SubspaceScreen = ({ route, navigation }) => {
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || sending) return;
+    if (!newMessage.trim() || sending) return;
 
     try {
       setSending(true);
       const userMessage = {
         user_id: user.id,
         subspace_id: subspaceId,
-        content: inputText.trim(),
+        content: newMessage.trim(),
         is_ai: false,
       };
 
@@ -349,7 +357,7 @@ const SubspaceScreen = ({ route, navigation }) => {
       if (saveError) throw saveError;
 
       setMessages(prev => [...prev, savedMessage]);
-      setInputText('');
+      setNewMessage('');
 
       // Get context from subspace
       const context = `This is a learning session about ${subspace.name}. ${subspace.description || ''}`;
@@ -391,20 +399,6 @@ const SubspaceScreen = ({ route, navigation }) => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </SafeAreaView>
-    );
-  }
-
-  if (error || !subspace) {
-    return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || 'Subspace not found'}</Text>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -453,26 +447,24 @@ const SubspaceScreen = ({ route, navigation }) => {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Ask anything about this topic..."
-              placeholderTextColor={colors.textSecondary}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Type your message..."
               multiline
-              maxHeight={100}
-              onSubmitEditing={handleSend}
+              editable={!isLoading}
             />
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                (!inputText.trim() || sending) && styles.sendButtonDisabled
+                (!newMessage.trim() || sending) && styles.sendButtonDisabled
               ]}
               onPress={handleSend}
-              disabled={!inputText.trim() || sending}
+              disabled={!newMessage.trim() || sending}
             >
               <Ionicons 
                 name="send" 
                 size={24} 
-                color={!inputText.trim() || sending ? colors.textSecondary : colors.primary} 
+                color={!newMessage.trim() || sending ? colors.textSecondary : colors.primary} 
               />
             </TouchableOpacity>
           </View>

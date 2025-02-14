@@ -842,15 +842,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   contentContainer: {
-    padding: spacing.xl,
-    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.xl : spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
+    padding: spacing.sm,
+    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.sm : spacing.sm,
+    paddingBottom: spacing.sm,
     minHeight: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   header: {
     alignItems: 'center',
-    marginBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
+    position: 'relative',
+    top: 0,
   },
   title: {
     ...typography.h1,
@@ -861,14 +862,14 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.body,
     color: colors.textSecondary,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   inputSection: {
-    marginTop: spacing.lg,
+    marginTop: 0,
   },
   buttonSection: {
     width: '100%',
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
   },
   submitButton: {
     marginTop: spacing.md,
@@ -959,10 +960,11 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
     marginLeft: spacing.sm,
     height: '100%',
+    textAlign: 'left',
     textAlignVertical: 'center',
-    lineHeight: Platform.OS === 'ios' ? 22 : undefined,
+    lineHeight: Platform.OS === 'ios' ? 40 : undefined,
     includeFontPadding: false,
-    minHeight: Platform.OS === 'ios' ? 44 : 40,
+    minHeight: Platform.OS === 'ios' ? 48 : 40,
   },
 });
 

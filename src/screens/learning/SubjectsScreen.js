@@ -318,10 +318,10 @@ const SubjectsScreen = ({ navigation }) => {
     <KeyboardAwareView>
       <View style={styles.container}>
         <AnimatedView animation="fade">
-          <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}>
-            <Text style={styles.headerTitle}>Your Subjects</Text>
-            <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text>
-          </View>
+          {/* <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}> // Removed */}
+          {/*   <Text style={styles.headerTitle}>Your Subjects</Text> // Removed */}
+          {/*   <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text> // Removed */}
+          {/* </View> // Removed */}
         </AnimatedView>
 
         <AnimatedView animation="slide" delay={200}>
@@ -413,6 +413,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingTop: 0,
   },
   header: {
     paddingHorizontal: spacing.contentHorizontal,
@@ -437,16 +438,14 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.contentHorizontal,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   newSubjectInput: {
     flex: 1,
-    marginRight: spacing.md,
   },
   list: {
     paddingHorizontal: spacing.contentHorizontal,
@@ -534,7 +533,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   createButton: {
-    minWidth: 100,
+    marginLeft: spacing.sm,
+    alignSelf: 'center',
   },
   modalOverlay: {
     flex: 1,

@@ -35,7 +35,7 @@ const ChangePasswordScreen = ({ navigation }) => {
     setError('');
 
     try {
-      await userService.changePassword(formData.currentPassword, formData.newPassword);
+      await userService.updatePassword(formData.newPassword);
       navigation.goBack();
     } catch (err) {
       setError(err.message || 'Failed to change password');
