@@ -166,12 +166,24 @@ export const subjectService = {
   // Get last accessed subspace
   getLastAccessedSubspace: async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from('subspaces')
         .select(`
           *,
-          subject:subjects(*)
+          subject:subjects!inner(
+            *,
+            user_id
+          ),
+          learning_sessions(
+            duration_minutes,
+            created_at
+          )
         `)
+        .eq('subject.user_id', user.id)
+        .eq('learning_sessions.user_id', user.id)
         .order('last_accessed', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -181,56 +193,116 @@ export const subjectService = {
         return null;
       }
 
-      if (!data) {
-        return null;
-      }
+      if (!data || !data.subject) return null;
 
-      return data;
+      // Calculate total time spent
+      const totalTime = data.learning_sessions?.reduce((sum, session) => 
+        sum + session.duration_minutes, 0) || 0;
+
+      return {
+        ...data,
+        total_time_spent: totalTime,
+        last_session: data.learning_sessions?.[0]
+      };
     } catch (error) {
       console.error('Error in getLastAccessedSubspace:', error);
       return null;
     }
   },
 
-  // Record learning session and update streak
-  recordLearningSession: async (userId, subjectId, subspaceId, durationMinutes) => {
-    const [sessionResponse, streakResponse] = await Promise.all([
-      supabase
-        .from('learning_sessions')
-        .insert([{
-          user_id: userId,
-          subject_id: subjectId,
-          subspace_id: subspaceId,
-          duration_minutes: durationMinutes,
-        }])
-        .select()
-        .single(),
-      
-      supabase
-        .from('users')
-        .update({ 
-          last_activity_date: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select()
-        .single(),
-    ]);
-
-    return {
-      session: handleResponse(sessionResponse),
-      streak: handleResponse(streakResponse),
-    };
-  },
-
   // Update last accessed time for subspace
   updateLastAccessed: async (subspaceId) => {
-    const response = await supabase
-      .from('subspaces')
-      .update({ last_accessed: new Date().toISOString() })
-      .eq('id', subspaceId)
-      .select()
-      .single();
-    
-    return handleResponse(response);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      // First check if there's a recent session (within last hour)
+      const { data: recentSession } = await supabase
+        .from('learning_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('subspace_id', subspaceId)
+        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (recentSession) {
+        // Update the subspace last accessed time only
+        const subspaceResponse = await supabase
+          .from('subspaces')
+          .update({ 
+            last_accessed: new Date().toISOString()
+          })
+          .eq('id', subspaceId)
+          .select()
+          .single();
+
+        return handleResponse(subspaceResponse);
+      }
+
+      // If no recent session, create a new one with minimal duration
+      const sessionResponse = await supabase
+        .from('learning_sessions')
+        .insert({
+          user_id: user.id,
+          subspace_id: subspaceId,
+          duration_minutes: 0.5
+        })
+        .select()
+        .single();
+
+      if (sessionResponse.error) throw sessionResponse.error;
+
+      // Then update the subspace last accessed time
+      const subspaceResponse = await supabase
+        .from('subspaces')
+        .update({ 
+          last_accessed: new Date().toISOString()
+        })
+        .eq('id', subspaceId)
+        .select()
+        .single();
+
+      return handleResponse(subspaceResponse);
+    } catch (error) {
+      console.error('Error in updateLastAccessed:', error);
+      throw error;
+    }
+  },
+
+  // Record learning session
+  recordLearningSession: async (userId, subjectId, subspaceId, durationMinutes) => {
+    try {
+      const [sessionResponse, subspaceResponse] = await Promise.all([
+        supabase
+          .from('learning_sessions')
+          .insert([{
+            user_id: userId,
+            subject_id: subjectId,
+            subspace_id: subspaceId,
+            duration_minutes: durationMinutes
+          }])
+          .select()
+          .single(),
+        
+        supabase
+          .from('subspaces')
+          .update({ 
+            last_accessed: new Date().toISOString()
+          })
+          .eq('id', subspaceId)
+          .select()
+          .single(),
+      ]);
+
+      return {
+        session: handleResponse(sessionResponse),
+        subspace: handleResponse(subspaceResponse),
+      };
+    } catch (error) {
+      console.error('Error in recordLearningSession:', error);
+      throw error;
+    }
   },
 }; 

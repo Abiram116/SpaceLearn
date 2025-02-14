@@ -119,6 +119,7 @@ CREATE TABLE learning_sessions (
   subject_id UUID REFERENCES subjects ON DELETE CASCADE,
   subspace_id UUID REFERENCES subspaces ON DELETE CASCADE,
   duration_minutes INTEGER NOT NULL,
+  session_type TEXT DEFAULT 'study',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -318,4 +319,59 @@ $$;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Create function to update user streak and last activity
+CREATE OR REPLACE FUNCTION update_user_streak()
+RETURNS trigger
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  last_date TIMESTAMPTZ;
+  current_streak INTEGER;
+BEGIN
+  -- Get the user's last activity date and current streak
+  SELECT last_activity_date, streak_count 
+  INTO last_date, current_streak
+  FROM users 
+  WHERE id = NEW.user_id;
+
+  -- If it's a new day (in user's timezone)
+  IF last_date IS NULL OR DATE(last_date AT TIME ZONE 'UTC') < DATE(NEW.created_at AT TIME ZONE 'UTC') THEN
+    -- If it's consecutive (yesterday)
+    IF last_date IS NULL OR DATE(last_date AT TIME ZONE 'UTC') = DATE(NEW.created_at AT TIME ZONE 'UTC' - INTERVAL '1 day') THEN
+      current_streak := COALESCE(current_streak, 0) + 1;
+    ELSE
+      -- Reset streak if not consecutive
+      current_streak := 1;
+    END IF;
+
+    -- Update the user's streak and last activity
+    UPDATE users 
+    SET 
+      streak_count = current_streak,
+      last_activity_date = NEW.created_at,
+      updated_at = NOW()
+    WHERE id = NEW.user_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Create trigger to update streak on new learning session or chat message
+DROP TRIGGER IF EXISTS on_learning_session_created ON learning_sessions;
+DROP TRIGGER IF EXISTS on_chat_message_created ON chat_messages;
+
+CREATE TRIGGER on_learning_session_created
+  AFTER INSERT ON learning_sessions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_user_streak();
+
+CREATE TRIGGER on_chat_message_created
+  AFTER INSERT ON chat_messages
+  FOR EACH ROW
+  WHEN (NOT NEW.is_ai)
+  EXECUTE FUNCTION update_user_streak(); 

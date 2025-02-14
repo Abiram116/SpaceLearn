@@ -3,58 +3,30 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   useWindowDimensions,
   ActivityIndicator,
-  RefreshControl,
   Platform,
-  Image,
   StatusBar,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
 import { subjectService } from '../../services/subjectService';
 import { userService } from '../../services/userService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import AnimatedView from '../../components/common/AnimatedView';
 
-const DayStreak = ({ day, isActive }) => (
-  <View style={[styles.dayStreak, isActive && styles.dayStreakActive]}>
-    <Ionicons 
-      name="flash" 
-      size={20} 
-      color={isActive ? colors.primary : colors.textSecondary} 
-    />
-    <Text style={[styles.dayText, isActive && styles.dayTextActive]}>
-      {day}
-    </Text>
-  </View>
-);
-
 const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [recentActivities, setRecentActivities] = useState([]);
   const [streak, setStreak] = useState(0);
   const [continueLearning, setContinueLearning] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const { width } = useWindowDimensions();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const days = [
-    { key: 'mon', label: 'M' },
-    { key: 'tue', label: 'T' },
-    { key: 'wed', label: 'W' },
-    { key: 'thu', label: 'T' },
-    { key: 'fri', label: 'F' },
-    { key: 'sat', label: 'S' },
-    { key: 'sun', label: 'S' },
-  ];
 
   useEffect(() => {
     if (user) {
@@ -67,15 +39,6 @@ const HomeScreen = ({ navigation }) => {
     
     try {
       setLoading(true);
-      
-      // Load each piece of data separately to better handle errors
-      try {
-        const activitiesData = await subjectService.getRecentActivities();
-        setRecentActivities(activitiesData || []);
-      } catch (error) {
-        console.error('Error loading activities:', error);
-        setRecentActivities([]);
-      }
 
       try {
         const streakData = await userService.getUserStreak(user.id);
@@ -105,19 +68,14 @@ const HomeScreen = ({ navigation }) => {
       console.error('Error in loadData:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const handleRefresh = () => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    loadData();
-  };
-
-  console.log('User data:', user);
-
-  const headerHeight = 44;
-  const totalHeaderHeight = insets.top + headerHeight;
+    await loadData();
+    setRefreshing(false);
+  }, []);
 
   if (loading) {
     return (
@@ -147,14 +105,27 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={[
-        styles.content, 
-        { 
-          paddingTop: insets.top + 48 + spacing.md,
-          paddingHorizontal: spacing.lg,
-          paddingBottom: spacing.lg
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          { 
+            paddingTop: insets.top + 48 + spacing.md,
+            paddingHorizontal: spacing.lg,
+            paddingBottom: spacing.lg,
+            flexGrow: 1,
+          }
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
         }
-      ]}>
+        showsVerticalScrollIndicator={false}
+      >
         <AnimatedView animation="fade">
           <View style={[styles.welcomeContainer, { marginTop: 0 }]}>
             <Text style={[
@@ -192,57 +163,42 @@ const HomeScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.continueCard}
                 onPress={() => navigation.navigate('Subspace', {
-                  subjectId: continueLearning.subject_id,
+                  subjectId: continueLearning.subject?.id,
                   subspaceId: continueLearning.id,
+                  subspaceName: continueLearning.name,
+                  subjectName: continueLearning.subject?.name
                 })}
               >
                 <View style={styles.continueContent}>
-                  <Text style={styles.continueTitle}>{continueLearning.name}</Text>
-                  <Text style={styles.continueSubtitle}>Continue where you left off</Text>
+                  <View style={styles.continueHeader}>
+                    <Text style={styles.continueTitle}>{continueLearning.name}</Text>
+                    <Text style={styles.continueSubject}>{continueLearning.subject?.name}</Text>
+                  </View>
+                  
+                  <View style={styles.statsContainer}>
+                    <View style={styles.statItem}>
+                      <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.statText}>
+                        {Math.round(continueLearning.total_time_spent || 0)} mins spent
+                      </Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Ionicons 
+                        name="time" 
+                        size={16} 
+                        color={colors.primary}
+                      />
+                      <Text style={[styles.statText, { color: colors.primary }]}>
+                        Continue Learning
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </TouchableOpacity>
             </View>
           </AnimatedView>
         )}
-
-        <AnimatedView animation="slide" delay={600}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            {recentActivities.length > 0 ? (
-              <View style={styles.activitiesContainer}>
-                {recentActivities.map((activity) => (
-                  <TouchableOpacity
-                    key={activity.id}
-                    style={styles.activityItem}
-                    onPress={() => navigation.navigate('Subspace', {
-                      subjectId: activity.subject_id,
-                      subspaceId: activity.subspace_id,
-                    })}
-                  >
-                    <View style={styles.activityContent}>
-                      <Text style={styles.activityTitle} numberOfLines={1}>
-                        {activity.subject?.name}
-                      </Text>
-                      <Text style={styles.activitySubtitle} numberOfLines={1}>
-                        {activity.subspace?.name}
-                      </Text>
-                      <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: '30%' }]} />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyStateContainer}>
-                <Text style={styles.emptyText}>
-                  No recent activity. Start learning!
-                </Text>
-              </View>
-            )}
-          </View>
-        </AnimatedView>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -251,6 +207,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     position: 'absolute',
@@ -314,20 +274,13 @@ const styles = StyleSheet.create({
   },
   streakIconContainer: {
     backgroundColor: colors.primaryLight,
-    padding: spacing.md,
     borderRadius: borderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 56,
+    height: 56,
     marginRight: spacing.md,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    marginBottom: spacing.xs,
   },
   streakTextContainer: {
     flex: 1,
@@ -351,83 +304,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.md,
   },
-  section: {
-    marginBottom: spacing.md,
-  },
   sectionTitle: {
     ...typography.h2,
     fontSize: 20,
     color: colors.text,
     marginBottom: spacing.sm,
-  },
-  activitiesContainer: {
-    gap: spacing.sm,
-  },
-  activityItem: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  activityContent: {
-    padding: spacing.md,
-  },
-  activityTitle: {
-    ...typography.subtitle,
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  activitySubtitle: {
-    ...typography.body,
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  progressBar: {
-    height: 3,
-    backgroundColor: colors.border,
-    borderRadius: borderRadius.full,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.full,
-  },
-  emptyStateContainer: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  emptyText: {
-    ...typography.body,
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
   },
   continueContainer: {
     marginBottom: spacing.lg,
@@ -449,17 +330,31 @@ const styles = StyleSheet.create({
     }),
   },
   continueContent: {
-    flexDirection: 'column',
+    padding: spacing.lg,
+  },
+  continueHeader: {
+    marginBottom: spacing.md,
   },
   continueTitle: {
-    ...typography.subtitle,
-    fontSize: 16,
+    ...typography.h3,
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  continueSubtitle: {
-    ...typography.body,
-    fontSize: 14,
+  continueSubject: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  statText: {
+    ...typography.caption,
     color: colors.textSecondary,
   },
 });
