@@ -137,17 +137,41 @@ export const userService = {
         return { error: 'Please provide both email and password' };
       }
 
+      // Basic network check
+      try {
+        const testResponse = await fetch('https://www.google.com');
+        if (!testResponse.ok) {
+          return { error: 'Internet connection appears to be offline. Please check your connection.' };
+        }
+      } catch (networkError) {
+        console.error('Basic network test failed:', networkError);
+        return { error: 'Unable to connect to the internet. Please check your connection.' };
+      }
+
+      console.log('Network check passed, attempting Supabase login');
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('Supabase sign in error:', error);
-        if (error.message.includes('Invalid login credentials')) {
+        console.error('Supabase sign in error:', {
+          message: error.message,
+          name: error.name,
+          status: error?.status
+        });
+        
+        if (error.message?.includes('Invalid login credentials')) {
           return { error: 'Incorrect email or password. Please try again.' };
         }
-        return { error: error.message || 'Failed to sign in' };
+        if (error.message?.includes('Network request failed')) {
+          return { error: 'Unable to reach the server. Please check your internet connection and try again.' };
+        }
+        if (error.message?.includes('Email not confirmed')) {
+          return { error: 'Please verify your email address before signing in.' };
+        }
+        return { error: 'Unable to sign in. Please try again later.' };
       }
 
       if (!data?.user) {
@@ -158,8 +182,12 @@ export const userService = {
       console.log('Sign in successful for:', email);
       return { data };
     } catch (error) {
-      console.error('Unexpected error in signIn:', error);
-      return { error: error.message || 'An unexpected error occurred' };
+      console.error('Unexpected error in signIn:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      return { error: 'An unexpected error occurred. Please try again.' };
     }
   },
 

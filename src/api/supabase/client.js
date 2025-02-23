@@ -58,29 +58,66 @@ const supabaseConfig = {
   realtime: {
     timeout: 20000
   },
-  // Add retries for better reliability
+  // Enhanced network handling with retries
   httpClient: {
     fetch: async (url, options) => {
-      console.log('Making request to:', url);
-      try {
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            ...options.headers,
-            'apikey': supabaseAnonKey,
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000; // 1 second
+      
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+      
+      console.log('Making Supabase request:', {
+        url,
+        method: options.method,
+        platform: Platform.OS
+      });
+
+      let lastError;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            console.log(`Retry attempt ${attempt + 1} of ${MAX_RETRIES}`);
+            await delay(RETRY_DELAY * attempt);
           }
-        });
-        console.log('Response status:', response.status);
-        return response;
-      } catch (error) {
-        console.error('Network error details:', {
-          message: error.message,
-          type: error.type,
-          code: error.code,
-          stack: error.stack
-        });
-        throw error;
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+          const response = await fetch(url, {
+            ...options,
+            headers: {
+              ...options.headers,
+              'apikey': supabaseAnonKey,
+            },
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          console.log('Response received:', {
+            status: response.status,
+            ok: response.ok,
+            url: url.split('?')[0] // Log URL without query params
+          });
+
+          return response;
+        } catch (error) {
+          lastError = error;
+          console.error('Request failed:', {
+            attempt: attempt + 1,
+            error: error.message,
+            type: error.name,
+            url: url.split('?')[0]
+          });
+
+          // Don't retry if it's an abort error or last attempt
+          if (error.name === 'AbortError' || attempt === MAX_RETRIES - 1) {
+            throw error;
+          }
+        }
       }
+      
+      throw lastError;
     }
   }
 };
