@@ -8,7 +8,9 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
@@ -23,7 +25,7 @@ const ChatScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const { user } = useAuth();
-  const { subspaceId } = route.params;
+  const { subspaceId, subspaceName, subjectName } = route.params;
 
   useEffect(() => {
     loadChatHistory();
@@ -124,107 +126,282 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Chat</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={handleBack} 
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>{subspaceName}</Text>
+            <Text style={styles.headerSubtitle}>{subjectName}</Text>
+          </View>
+        </View>
 
-      <FlatList
-        data={messages}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <ChatBubble message={item.content} isUser={item.isUser} />
-        )}
-        inverted
-        contentContainerStyle={styles.messagesContainer}
-      />
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Type your message..."
-          placeholderTextColor={colors.textSecondary}
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity 
-          style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!message.trim() || loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.background} size="small" />
-          ) : (
-            <Ionicons name="send" size={24} color={colors.background} />
+        <FlatList
+          data={messages}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => (
+            <ChatBubble message={item.content} isUser={item.isUser} />
           )}
-        </TouchableOpacity>
+          inverted
+          contentContainerStyle={styles.messagesContainer}
+          style={styles.messagesList}
+        />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Type your message..."
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity 
+                style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={!message.trim() || loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Ionicons name="send" size={24} color={colors.white} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </View>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+  content: {
+    flex: 1,
+    padding: spacing.lg,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.error,
+  },
+  headerButton: {
+    padding: spacing.sm,
+    marginRight: spacing.sm,
+  },
+  chatContainer: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  chatContent: {
+    paddingVertical: spacing.md,
+  },
+  loadingMore: {
+    padding: spacing.md,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  userMessage: {
+    justifyContent: 'flex-end',
+  },
+  aiMessage: {
+    justifyContent: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    ...shadows.small,
+  },
+  userBubble: {
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: borderRadius.xs,
+  },
+  aiBubble: {
+    backgroundColor: colors.card,
+    borderBottomLeftRadius: borderRadius.xs,
+  },
+  messageText: {
+    ...typography.body,
+    lineHeight: 20,
+  },
+  userMessageText: {
+    color: colors.background,
+  },
+  aiMessageText: {
+    color: colors.text,
+  },
+  codeBlockWrapper: {
+    marginVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: '#282C34',
+  },
+  codeBlock: {
+    width: '100%',
+  },
+  codeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: '#21252B',
+    borderBottomWidth: 1,
+    borderBottomColor: '#181A1F',
+  },
+  codeLanguage: {
+    ...typography.caption,
+    color: '#ABB2BF',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  copyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  backButton: {
     padding: spacing.xs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: '#2C313A',
   },
-  headerTitle: {
-    ...typography.h2,
-    color: colors.text,
-    marginLeft: spacing.md,
+  copyButtonText: {
+    ...typography.caption,
+    color: '#ABB2BF',
+    marginLeft: spacing.xs,
+    fontWeight: '500',
   },
-  messagesContainer: {
+  codeContent: {
     padding: spacing.md,
+    minWidth: '100%',
+  },
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  typingText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: spacing.md,
-    backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    ...shadows.small,
+    alignItems: 'flex-end',
+    padding: spacing.sm,
   },
   input: {
     flex: 1,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    padding: spacing.sm,
-    marginRight: spacing.sm,
-    maxHeight: 100,
     ...typography.body,
     color: colors.text,
+    minHeight: 40,
+    maxHeight: 100,
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.sm,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.primary,
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.border,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.small,
   },
-  sendButtonDisabled: {
-    backgroundColor: colors.border,
+  backButtonText: {
+    ...typography.caption,
+    color: colors.background,
+  },
+  codeContainer: {
+    padding: spacing.sm,
+  },
+  codeLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    ...shadows.small,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  headerTitle: {
+    ...typography.h2,
+    color: colors.text,
+    fontSize: 20,
+  },
+  headerSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  inputWrapper: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  messagesList: {
+    flex: 1,
+  },
+  messagesContainer: {
+    padding: spacing.md,
   },
 });
 

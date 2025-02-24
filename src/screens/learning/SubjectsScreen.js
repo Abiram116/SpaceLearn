@@ -253,7 +253,14 @@ const SubjectsScreen = ({ navigation }) => {
                 autoFocus
               />
             ) : (
-              <Text style={styles.subjectName}>{item.name}</Text>
+              <View style={styles.subjectInfo}>
+                <Text style={styles.subjectName}>{item.name}</Text>
+                <Text style={styles.timeSpent}>
+                  {item.total_time_spent > 0 
+                    ? `${Math.round(item.total_time_spent)} mins total`
+                    : 'No time logged yet'}
+                </Text>
+              </View>
             )}
           </View>
           
@@ -294,7 +301,14 @@ const SubjectsScreen = ({ navigation }) => {
                     <View style={styles.subspaceContent}>
                       <View style={styles.subspaceTitleContainer}>
                         <Ionicons name="cube-outline" size={20} color={colors.primary} />
-                        <Text style={styles.subspaceName}>{subspace.name}</Text>
+                        <View style={styles.subspaceInfo}>
+                          <Text style={styles.subspaceName}>{subspace.name}</Text>
+                          <Text style={styles.subspaceTimeSpent}>
+                            {subspace.total_time_spent > 0 
+                              ? `${Math.round(subspace.total_time_spent)} mins spent`
+                              : 'No time logged yet'}
+                          </Text>
+                        </View>
                       </View>
                       <TouchableOpacity
                         style={styles.deleteSubspace}
@@ -508,10 +522,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: spacing.md,
   },
+  subjectInfo: {
+    flex: 1,
+  },
   subjectName: {
     ...typography.h3,
     color: colors.text,
     flex: 1,
+  },
+  timeSpent: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -546,6 +568,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: spacing.sm,
+  },
+  subspaceInfo: {
+    flex: 1,
   },
   subspaceName: {
     ...typography.body,
@@ -641,6 +666,11 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: spacing.xl,
+  },
+  subspaceTimeSpent: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontSize: 12,
   },
 });
 

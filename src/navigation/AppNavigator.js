@@ -20,6 +20,7 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 import SubjectsScreen from '../screens/learning/SubjectsScreen';
 import SubspaceScreen from '../screens/learning/SubspaceScreen';
 import NotesScreen from '../screens/learning/NotesScreen';
+import ChatScreen from '../screens/learning/ChatScreen';
 
 // Assignment Screens
 import AssignmentsScreen from '../screens/assignments/AssignmentsScreen';
@@ -42,6 +43,7 @@ const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'Home') {
@@ -59,41 +61,13 @@ const TabNavigator = () => {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTitleStyle: {
-          ...typography.h2,
-          color: colors.text,
-        },
-        headerShadowVisible: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
-      <Tab.Screen 
-        name="Subjects" 
-        component={SubjectsScreen}
-        options={{ title: 'Your Subjects' }}
-      />
-      <Tab.Screen 
-        name="Notes" 
-        component={NotesScreen}
-        options={{ title: 'Your Notes' }}
-      />
-      <Tab.Screen 
-        name="Assignments" 
-        component={AssignmentsScreen}
-        options={{ title: 'Your Tasks' }}
-      />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{ title: 'Profile' }}
-      />
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Subjects" component={SubjectsScreen} />
+      <Tab.Screen name="Notes" component={NotesScreen} />
+      <Tab.Screen name="Assignments" component={AssignmentsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 };
@@ -107,49 +81,17 @@ const MainAppStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTitleStyle: {
-          ...typography.h2,
-          color: colors.text,
-        },
-        headerShadowVisible: false,
-        headerBackTitleVisible: false,
-        headerTintColor: colors.primary,
+        headerShown: false,
+        animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
+        gestureEnabled: Platform.OS !== 'web',
+        gestureDirection: 'horizontal',
       }}
     >
-      <Stack.Screen
-        name="MainTabs"
-        component={TabNavigator}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Subspace"
-        component={SubspaceScreen}
-        options={{
-          headerShown: true,
-          animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
-          gestureEnabled: Platform.OS !== 'web',
-          gestureDirection: 'horizontal',
-        }}
-      />
-      <Stack.Screen
-        name="EditProfile"
-        component={EditProfileScreen}
-        options={{
-          title: 'Edit Profile',
-          animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
-        }}
-      />
-      <Stack.Screen
-        name="ChangePassword"
-        component={ChangePasswordScreen}
-        options={{
-          title: 'Change Password',
-          animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
-        }}
-      />
+      <Stack.Screen name="MainTabs" component={TabNavigator} />
+      <Stack.Screen name="Subspace" component={SubspaceScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     </Stack.Navigator>
   );
 };
@@ -168,37 +110,10 @@ const AppNavigator = () => {
         animation: Platform.OS === 'web' ? 'none' : 'default',
       }}
     >
-      <Stack.Screen 
-        name="Splash" 
-        component={SplashScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen 
-        name="Auth" 
-        component={AuthScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen 
-        name="ForgotPassword" 
-        component={ForgotPasswordScreen}
-        options={{
-          headerShown: true,
-          title: 'Forgot Password',
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTintColor: colors.primary,
-          headerTitleStyle: {
-            ...typography.h2,
-            color: colors.text,
-          },
-        }}
-      />
-      <Stack.Screen 
-        name="MainApp" 
-        component={MainAppStack}
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen name="Auth" component={AuthScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="MainApp" component={MainAppStack} />
     </Stack.Navigator>
   );
 };

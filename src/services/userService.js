@@ -236,8 +236,18 @@ export const userService = {
   // Get current user profile
   getCurrentUser: async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      console.log('=== Starting getCurrentUser ===');
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('Auth error in getCurrentUser:', authError);
+        throw authError;
+      }
+      
+      if (!user) {
+        console.log('No authenticated user found');
+        return null;
+      }
 
       console.log('Checking for existing user profile...');
       
@@ -248,7 +258,10 @@ export const userService = {
         .eq('id', user.id)
         .maybeSingle();  // Use maybeSingle instead of single to avoid errors
 
-      console.log('Existing user check result:', { existingUser, checkError });
+      console.log('Existing user check result:', { 
+        hasUser: !!existingUser, 
+        hasError: !!checkError 
+      });
 
       // If user doesn't exist in the users table, create a profile
       if (!existingUser && !checkError) {
@@ -258,7 +271,7 @@ export const userService = {
           id: user.id,
           email: user.email,
           username: user.email.split('@')[0],
-          full_name: user.user_metadata?.full_name || null,
+          full_name: user.user_metadata?.full_name || user.email.split('@')[0],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           streak_count: 0,
@@ -269,6 +282,12 @@ export const userService = {
           age: null
         };
 
+        console.log('Attempting to create user profile with data:', {
+          ...newUserData,
+          id: 'HIDDEN',
+          email: 'HIDDEN'
+        });
+
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .upsert([newUserData])
@@ -276,29 +295,56 @@ export const userService = {
           .single();
 
         if (createError) {
-          console.error('Error creating user profile:', createError);
+          console.error('Error creating user profile:', {
+            error: createError,
+            message: createError.message,
+            details: createError.details,
+            hint: createError.hint,
+            code: createError.code
+          });
           throw createError;
         }
 
-        console.log('New user profile created:', newUser);
+        if (!newUser) {
+          console.error('No profile data returned after creation');
+          throw new Error('Failed to create user profile: No data returned');
+        }
+
+        console.log('User profile created successfully:', {
+          id: 'HIDDEN',
+          username: newUser.username
+        });
+        
         return newUser;
       }
 
       if (checkError) {
-        console.error('Error checking user profile:', checkError);
+        console.error('Error checking user profile:', {
+          error: checkError,
+          message: checkError.message,
+          details: checkError.details,
+          hint: checkError.hint,
+          code: checkError.code
+        });
         throw checkError;
       }
 
-      // Safely handle the grade field removal
+      // Return the existing user data
       if (existingUser) {
-        const { grade, ...userWithoutGrade } = existingUser;
-        console.log('Profile data loaded:', userWithoutGrade);
-        return userWithoutGrade;
+        console.log('Returning existing user profile:', {
+          id: 'HIDDEN',
+          username: existingUser.username
+        });
+        return existingUser;
       }
 
       return null;
     } catch (error) {
-      console.error('Error in getCurrentUser:', error);
+      console.error('Error in getCurrentUser:', {
+        error,
+        message: error.message,
+        stack: error.stack
+      });
       throw error;
     }
   },

@@ -255,15 +255,6 @@ const SubspaceScreen = ({ route, navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    console.log('Received parameters:', { subjectId, subspaceId });
-
-    if (!subjectId || !subspaceId) {
-      console.error('Invalid subspace parameters:', { subjectId, subspaceId });
-      setError('Invalid subspace parameters');
-      setLoading(false);
-      return;
-    }
-
     console.log('Loading subspace and messages for:', { subjectId, subspaceId });
     loadSubspace();
     loadMessages();
@@ -271,29 +262,52 @@ const SubspaceScreen = ({ route, navigation }) => {
 
   const loadSubspace = async () => {
     try {
+      setLoading(true);
       const response = await subjectService.getSubspaces(subjectId);
       const currentSubspace = response.find(s => s.id === subspaceId);
+      
       if (currentSubspace) {
         setSubspace(currentSubspace);
+        // Store this as the last accessed subspace
+        try {
+          await subjectService.updateLastAccessedId(currentSubspace.full_sequence_id);
+          console.log('Updated last accessed sequence:', currentSubspace.full_sequence_id);
+        } catch (updateError) {
+          console.error('Error updating last accessed sequence:', updateError);
+        }
+
         // Update last accessed timestamp
-        await subjectService.updateLastAccessed(subspaceId);
-        navigation.setOptions({ 
-          title: currentSubspace.name,
-          headerRight: () => (
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => navigation.navigate('EditSubspace', { subspace: currentSubspace })}
-            >
-              <Ionicons name="settings-outline" size={24} color={colors.primary} />
-            </TouchableOpacity>
-          ),
-        });
-      } else {
-        setSubspace({ name: 'Unknown Subspace' }); // Fallback subspace
+        try {
+          console.log('Updating last accessed for subspace:', subspaceId, 'user:', user.id);
+          const { data, error } = await supabase
+            .from('learning_sessions')
+            .upsert([
+              {
+                user_id: user.id,
+                subject_id: subjectId,
+                subspace_id: subspaceId,
+                duration_minutes: 0,
+                start_time: new Date().toISOString(),
+                end_time: null,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ])
+            .select();
+
+          if (error) {
+            console.error('Error updating learning session:', error);
+          } else {
+            console.log('Successfully updated learning session:', data);
+          }
+        } catch (updateError) {
+          console.error('Error in learning session update:', updateError);
+        }
       }
     } catch (error) {
       console.error('Error loading subspace:', error);
-      setSubspace({ name: 'Unknown Subspace' }); // Fallback subspace
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -406,6 +420,19 @@ const SubspaceScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>{route.params?.subspaceName || subspace?.name || 'Loading...'}</Text>
+          <Text style={styles.headerSubtitle}>{route.params?.subjectName || 'Loading...'}</Text>
+        </View>
+      </View>
       <KeyboardAvoidingView 
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -631,9 +658,12 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   backButton: {
-    padding: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
     ...shadows.small,
   },
   backButtonText: {
@@ -647,6 +677,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginVertical: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    ...shadows.small,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  headerTitle: {
+    ...typography.h2,
+    color: colors.text,
+    fontSize: 20,
+  },
+  headerSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 });
 

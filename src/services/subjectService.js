@@ -4,27 +4,39 @@ export const subjectService = {
   // Get all subjects for the current user
   getSubjects: async () => {
     try {
+      console.log('Starting getSubjects...');
+      
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
-        console.error('Authentication error:', authError);
+        console.error('Authentication error in getSubjects:', authError);
         throw new Error('Authentication failed');
       }
       
       if (!user) {
-        console.error('No authenticated user found');
+        console.error('No authenticated user found in getSubjects');
         throw new Error('No authenticated user');
       }
 
       console.log('Fetching subjects for user:', user.id);
 
+      // Get subjects with their total time spent
       const { data, error } = await supabase
         .from('subjects')
-        .select('*')
+        .select(`
+          *,
+          learning_sessions(duration_minutes)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching subjects:', error);
+        console.error('Error fetching subjects:', {
+          error,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
 
@@ -33,15 +45,32 @@ export const subjectService = {
         return [];
       }
 
-      console.log('Found subjects for user:', {
+      // Calculate total time for each subject
+      const subjectsWithTime = data.map(subject => ({
+        ...subject,
+        total_time_spent: subject.learning_sessions?.reduce(
+          (sum, session) => sum + (session.duration_minutes || 0), 
+          0
+        ) || 0
+      }));
+
+      console.log('Found subjects with time:', {
         userId: user.id,
-        count: data.length,
-        subjects: data.map(s => ({ id: s.id, name: s.name }))
+        count: subjectsWithTime.length,
+        subjects: subjectsWithTime.map(s => ({ 
+          id: s.id, 
+          name: s.name,
+          timeSpent: s.total_time_spent 
+        }))
       });
 
-      return data;
+      return subjectsWithTime;
     } catch (error) {
-      console.error('Error in getSubjects:', error);
+      console.error('Error in getSubjects:', {
+        error,
+        message: error.message,
+        stack: error.stack
+      });
       throw error;
     }
   },
@@ -52,11 +81,22 @@ export const subjectService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
+      // Get the count of existing subjects to determine the next sequence number
+      const { data: subjects, error: countError } = await supabase
+        .from('subjects')
+        .select('sequence_id')
+        .eq('user_id', user.id)
+        .order('sequence_id', { ascending: false })
+        .limit(1);
+
+      const nextSequenceId = subjects && subjects.length > 0 ? subjects[0].sequence_id + 1 : 1;
+
       const response = await supabase
         .from('subjects')
         .insert([{ 
           name,
-          user_id: user.id 
+          user_id: user.id,
+          sequence_id: nextSequenceId
         }])
         .select()
         .single();
@@ -103,13 +143,41 @@ export const subjectService = {
   // Get all subspaces for a subject
   getSubspaces: async (subjectId) => {
     try {
-      const response = await supabase
+      // Get subspaces with their total time spent
+      const { data, error } = await supabase
         .from('subspaces')
-        .select('*')
+        .select(`
+          *,
+          learning_sessions(duration_minutes)
+        `)
         .eq('subject_id', subjectId)
         .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching subspaces:', error);
+        throw error;
+      }
+
+      // Calculate total time for each subspace
+      const subspacesWithTime = data.map(subspace => ({
+        ...subspace,
+        total_time_spent: subspace.learning_sessions?.reduce(
+          (sum, session) => sum + (session.duration_minutes || 0),
+          0
+        ) || 0
+      }));
+
+      console.log('Found subspaces with time:', {
+        subjectId,
+        count: subspacesWithTime.length,
+        subspaces: subspacesWithTime.map(s => ({
+          id: s.id,
+          name: s.name,
+          timeSpent: s.total_time_spent
+        }))
+      });
       
-      return handleResponse(response);
+      return subspacesWithTime;
     } catch (error) {
       console.error('Error in getSubspaces:', error);
       throw error;
@@ -119,9 +187,34 @@ export const subjectService = {
   // Create a new subspace
   createSubspace: async (subjectId, name, description = '') => {
     try {
+      // Get the subject's sequence_id and the count of existing subspaces
+      const { data: subject, error: subjectError } = await supabase
+        .from('subjects')
+        .select('sequence_id')
+        .eq('id', subjectId)
+        .single();
+
+      if (subjectError) throw subjectError;
+
+      const { data: subspaces, error: countError } = await supabase
+        .from('subspaces')
+        .select('sequence_id')
+        .eq('subject_id', subjectId)
+        .order('sequence_id', { ascending: false })
+        .limit(1);
+
+      const nextSubspaceSequence = subspaces && subspaces.length > 0 ? subspaces[0].sequence_id + 1 : 1;
+      const fullSequenceId = `${subject.sequence_id}.${nextSubspaceSequence}`;
+
       const response = await supabase
         .from('subspaces')
-        .insert([{ subject_id: subjectId, name, description }])
+        .insert([{ 
+          subject_id: subjectId, 
+          name, 
+          description,
+          sequence_id: nextSubspaceSequence,
+          full_sequence_id: fullSequenceId
+        }])
         .select()
         .single();
       
@@ -202,184 +295,120 @@ export const subjectService = {
     try {
       console.log('=== Starting getLastAccessedSubspace ===');
       
-      // Check authentication
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        console.error('Authentication error:', authError);
+      if (authError || !user) {
+        console.error('Auth error:', authError);
         return null;
       }
-      
-      if (!user) {
-        console.log('No authenticated user found');
-        return null;
-      }
-      console.log('Current user:', { id: user.id, email: user.email });
 
-      // First try to get the most recent subspace based on last_accessed timestamp
-      console.log('Fetching most recently accessed subspace...');
-      const { data: recentSubspace, error: recentError } = await supabase
-        .from('subspaces')
-        .select(`
-          *,
-          subject:subjects!inner(*)
-        `)
-        .eq('subject.user_id', user.id)  // Ensure subject belongs to current user
-        .order('last_accessed', { ascending: false })
-        .limit(1)
+      // First try to get the last accessed sequence from user preferences
+      const { data: preferences, error: prefError } = await supabase
+        .from('user_preferences')
+        .select('last_accessed_sequence')
+        .eq('user_id', user.id)
         .single();
 
-      if (!recentError && recentSubspace) {
-        console.log('Found recently accessed subspace:', {
-          id: recentSubspace.id,
-          name: recentSubspace.name,
-          subjectName: recentSubspace.subject?.name,
-          lastAccessed: recentSubspace.last_accessed
-        });
-
-        // Double check user ownership
-        if (recentSubspace.subject?.user_id !== user.id) {
-          console.log('Found subspace belongs to different user, skipping...');
-          return null;
-        }
-
-        // Get all learning sessions for this subspace
-        console.log('Fetching learning sessions for subspace:', recentSubspace.id);
-        const { data: subspaceSessions, error: sessionsError } = await supabase
-          .from('learning_sessions')
+      if (!prefError && preferences?.last_accessed_sequence) {
+        console.log('Found last accessed sequence:', preferences.last_accessed_sequence);
+        
+        // Parse the sequence ID to get subject and subspace sequence
+        const [subjectSeq, subspaceSeq] = preferences.last_accessed_sequence.split('.');
+        
+        // Get the subject and subspace based on sequence IDs
+        const { data: subjects, error: subjectError } = await supabase
+          .from('subjects')
           .select('*')
-          .eq('subspace_id', recentSubspace.id)
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .eq('sequence_id', parseInt(subjectSeq))
+          .single();
 
-        if (!sessionsError && subspaceSessions) {
-          console.log('Found learning sessions:', {
-            count: subspaceSessions.length,
-            sessions: subspaceSessions.map(s => ({
-              id: s.id,
-              duration: s.duration_minutes,
-              created: s.created_at
-            }))
-          });
+        if (!subjectError && subjects) {
+          const { data: subspaces, error: subspaceError } = await supabase
+            .from('subspaces')
+            .select(`
+              *,
+              learning_sessions(duration_minutes)
+            `)
+            .eq('subject_id', subjects.id)
+            .eq('sequence_id', parseInt(subspaceSeq))
+            .single();
 
-          const totalTime = subspaceSessions.reduce((sum, session) => 
-            sum + (session.duration_minutes || 0), 0);
+          if (!subspaceError && subspaces) {
+            const totalTimeSpent = subspaces.learning_sessions?.reduce(
+              (sum, session) => sum + (session.duration_minutes || 0),
+              0
+            ) || 0;
 
-          console.log('Calculated total time:', {
-            subspaceId: recentSubspace.id,
-            totalMinutes: totalTime,
-            sessionCount: subspaceSessions.length
-          });
-
-          // Get the most recent session
-          const lastSession = subspaceSessions[0];
-
-          return {
-            ...recentSubspace,
-            total_time_spent: totalTime,
-            last_session: lastSession
-          };
+            return {
+              id: subspaces.id,
+              name: subspaces.name,
+              description: subspaces.description,
+              subject: subjects,
+              subject_id: subjects.id,
+              total_time_spent: totalTimeSpent
+            };
+          }
         }
       }
 
-      // If no recently accessed subspace found, try getting the most recent learning session
-      console.log('Fetching most recent learning session...');
-      const { data: sessions, error: sessionError } = await supabase
-        .from('learning_sessions')
-        .select(`
-          *,
-          subspace:subspaces!inner(
-            *,
-            subject:subjects!inner(*)
-          )
-        `)
+      // If no last accessed sequence or it's invalid, fall back to most recent subject
+      const { data: recentSubjects, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('*')
         .eq('user_id', user.id)
-        .eq('subspace.subject.user_id', user.id)  // Ensure subject belongs to current user
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (!sessionError && sessions?.length > 0 && sessions[0].subspace) {
-        const lastSession = sessions[0];
-        
-        // Double check user ownership
-        if (lastSession.subspace?.subject?.user_id !== user.id) {
-          console.log('Found session belongs to different user, skipping...');
-          return null;
-        }
-
-        console.log('Found last session:', {
-          sessionId: lastSession.id,
-          subspaceId: lastSession.subspace.id,
-          subspaceName: lastSession.subspace.name,
-          duration: lastSession.duration_minutes
-        });
-
-        // Get all sessions for this subspace to calculate total time
-        const { data: subspaceSessions, error: subspaceError } = await supabase
-          .from('learning_sessions')
-          .select('duration_minutes')
-          .eq('subspace_id', lastSession.subspace.id)
-          .eq('user_id', user.id);
-
-        if (!subspaceError && subspaceSessions) {
-          const totalTime = subspaceSessions.reduce((sum, session) => 
-            sum + (session.duration_minutes || 0), 0);
-
-          console.log('Calculated total time from sessions:', {
-            subspaceId: lastSession.subspace.id,
-            totalMinutes: totalTime,
-            sessionCount: subspaceSessions.length
-          });
-
-          return {
-            ...lastSession.subspace,
-            total_time_spent: totalTime,
-            last_session: lastSession
-          };
-        }
+      if (subjectsError) {
+        console.error('Error fetching subjects:', subjectsError);
+        return null;
       }
 
-      // If still no subspace found, get the most recently created one
-      console.log('No recent activity found, fetching most recent subspace...');
-      const { data: fallbackSubspace, error: fallbackError } = await supabase
+      if (!recentSubjects || recentSubjects.length === 0) {
+        console.log('No subjects found');
+        return null;
+      }
+
+      const subject = recentSubjects[0];
+      console.log('Falling back to most recent subject:', subject.name);
+
+      // Try to get any subspaces for this subject
+      const { data: subspaces, error: subspacesError } = await supabase
         .from('subspaces')
         .select(`
           *,
-          subject:subjects!inner(*)
+          learning_sessions(duration_minutes)
         `)
-        .eq('subject.user_id', user.id)  // Ensure subject belongs to current user
+        .eq('subject_id', subject.id)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (!fallbackError && fallbackSubspace) {
-        // Double check user ownership
-        if (fallbackSubspace.subject?.user_id !== user.id) {
-          console.log('Found fallback belongs to different user, skipping...');
-          return null;
-        }
-
-        console.log('Using fallback subspace:', {
-          id: fallbackSubspace.id,
-          name: fallbackSubspace.name,
-          subjectName: fallbackSubspace.subject?.name
-        });
-
-        return {
-          ...fallbackSubspace,
-          total_time_spent: 0,
-          last_session: null
-        };
+      if (subspacesError) {
+        console.error('Error fetching subspaces:', subspacesError);
+        return { subject, total_time_spent: 0 };
       }
 
-      console.log('No subspaces found for user');
-      return null;
+      if (!subspaces || subspaces.length === 0) {
+        console.log('No subspaces found for subject:', subject.name);
+        return { subject, total_time_spent: 0 };
+      }
 
+      const subspace = subspaces[0];
+      const totalTimeSpent = subspace.learning_sessions?.reduce(
+        (sum, session) => sum + (session.duration_minutes || 0),
+        0
+      ) || 0;
+
+      return {
+        id: subspace.id,
+        name: subspace.name,
+        description: subspace.description,
+        subject,
+        subject_id: subject.id,
+        total_time_spent: totalTimeSpent
+      };
     } catch (error) {
-      console.error('Unexpected error in getLastAccessedSubspace:', {
-        error: error,
-        message: error.message,
-        stack: error.stack
-      });
+      console.error('Error in getLastAccessedSubspace:', error);
       return null;
     }
   },
@@ -644,6 +673,58 @@ export const subjectService = {
       return session;
     } catch (error) {
       console.error('Error in getActiveSession:', error);
+      throw error;
+    }
+  },
+
+  // Update last accessed subspace ID
+  updateLastAccessedId: async (fullSequenceId) => {
+    try {
+      console.log('Starting updateLastAccessedId with sequence:', fullSequenceId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      // First check if a preference record exists
+      const { data: existing, error: checkError } = await supabase
+        .from('user_preferences')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing preferences:', checkError);
+        throw checkError;
+      }
+
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          id: existing?.id,
+          user_id: user.id,
+          last_accessed_sequence: fullSequenceId,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update last accessed sequence:', error);
+        throw error;
+      }
+
+      console.log('Successfully updated last accessed sequence:', {
+        userId: user.id,
+        oldSequence: existing?.last_accessed_sequence,
+        newSequence: fullSequenceId
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error in updateLastAccessedId:', {
+        error,
+        message: error.message,
+        details: error.details
+      });
       throw error;
     }
   },

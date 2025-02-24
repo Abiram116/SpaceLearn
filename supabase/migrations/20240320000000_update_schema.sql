@@ -88,6 +88,7 @@ CREATE TABLE user_preferences (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users ON DELETE CASCADE,
   notification_enabled BOOLEAN DEFAULT true,
+  last_accessed_sequence TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -97,8 +98,10 @@ CREATE TABLE subjects (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users ON DELETE CASCADE,
   name TEXT NOT NULL,
+  sequence_id INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, sequence_id)
 );
 
 -- Create subspaces table
@@ -107,9 +110,12 @@ CREATE TABLE subspaces (
   subject_id UUID REFERENCES subjects ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  sequence_id INTEGER NOT NULL,
+  full_sequence_id TEXT NOT NULL,
   last_accessed TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(subject_id, sequence_id)
 );
 
 -- Create learning_sessions table
@@ -228,34 +234,17 @@ CREATE POLICY "Users can update own preferences" ON user_preferences
 
 -- Subjects policies
 DROP POLICY IF EXISTS "Enable all operations for authenticated users" ON subjects;
+DROP POLICY IF EXISTS "Users can view own subjects" ON subjects;
+DROP POLICY IF EXISTS "Users can insert own subjects" ON subjects;
+DROP POLICY IF EXISTS "Users can update own subjects" ON subjects;
+DROP POLICY IF EXISTS "Users can delete own subjects" ON subjects;
 
--- First enable a permissive policy for authenticated users
-CREATE POLICY "Enable all operations for authenticated users" ON subjects
+-- Create a single policy for all operations
+CREATE POLICY "Users can manage own subjects" ON subjects
   FOR ALL
   TO authenticated
-  USING (true)
+  USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
-
--- Then add specific policies
-CREATE POLICY "Users can view own subjects" ON subjects
-  FOR SELECT 
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own subjects" ON subjects
-  FOR INSERT 
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own subjects" ON subjects
-  FOR UPDATE 
-  TO authenticated
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own subjects" ON subjects
-  FOR DELETE 
-  TO authenticated
-  USING (auth.uid() = user_id);
 
 -- Subspaces policies
 CREATE POLICY "Users can CRUD own subspaces" ON subspaces
@@ -268,8 +257,33 @@ CREATE POLICY "Users can CRUD own subspaces" ON subspaces
   );
 
 -- Learning sessions policies
-CREATE POLICY "Users can CRUD own learning sessions" ON learning_sessions
-  FOR ALL USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can CRUD own learning sessions" ON learning_sessions;
+DROP POLICY IF EXISTS "Users can view own learning sessions" ON learning_sessions;
+DROP POLICY IF EXISTS "Users can insert own learning sessions" ON learning_sessions;
+DROP POLICY IF EXISTS "Users can update own learning sessions" ON learning_sessions;
+DROP POLICY IF EXISTS "Users can delete own learning sessions" ON learning_sessions;
+
+-- Create policies for learning sessions
+CREATE POLICY "Users can view own learning sessions" ON learning_sessions
+  FOR SELECT 
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own learning sessions" ON learning_sessions
+  FOR INSERT 
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own learning sessions" ON learning_sessions
+  FOR UPDATE 
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own learning sessions" ON learning_sessions
+  FOR DELETE 
+  TO authenticated
+  USING (auth.uid() = user_id);
 
 -- Notes policies
 CREATE POLICY "Users can CRUD own notes" ON notes

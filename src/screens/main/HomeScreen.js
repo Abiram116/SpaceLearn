@@ -34,6 +34,13 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [user]);
 
+  const onRefresh = React.useCallback(async () => {
+    console.log('Manual refresh triggered');
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, []);
+
   const loadData = async () => {
     if (!user?.id) {
       console.log('No user ID available, skipping data load');
@@ -44,70 +51,37 @@ const HomeScreen = ({ navigation }) => {
       setLoading(true);
       console.log('Starting to load home screen data...');
 
-      try {
-        const streakData = await userService.getUserStreak(user.id);
-        console.log('Streak data loaded:', streakData);
-        setStreak(streakData?.streak_count || 0);
-      } catch (error) {
-        console.error('Error loading streak:', error);
-        setStreak(0);
-      }
+      const [streakData, lastAccessedData, profileData] = await Promise.all([
+        userService.getUserStreak(user.id).catch(error => {
+          console.error('Error loading streak:', error);
+          return { streak_count: 0 };
+        }),
+        subjectService.getLastAccessedSubspace().catch(error => {
+          console.error('Error loading last accessed:', error);
+          return null;
+        }),
+        userService.getCurrentUser().catch(error => {
+          console.error('Error loading profile:', error);
+          return null;
+        })
+      ]);
 
-      try {
-        console.log('Fetching last accessed subspace...');
-        const lastAccessedData = await subjectService.getLastAccessedSubspace();
-        console.log('Last accessed data:', {
-          id: lastAccessedData?.id,
-          name: lastAccessedData?.name,
-          totalTime: lastAccessedData?.total_time_spent,
-          lastSession: lastAccessedData?.last_session ? {
-            id: lastAccessedData.last_session.id,
-            duration: lastAccessedData.last_session.duration_minutes,
-            created: lastAccessedData.last_session.created_at
-          } : null
-        });
-        
-        if (lastAccessedData) {
-          console.log('Setting continue learning data:', {
-            subspaceName: lastAccessedData.name,
-            subjectName: lastAccessedData.subject?.name,
-            totalTime: lastAccessedData.total_time_spent,
-            hasLastSession: !!lastAccessedData.last_session
-          });
-        } else {
-          console.log('No continue learning data available');
-        }
-        
-        setContinueLearning(lastAccessedData);
-      } catch (error) {
-        console.error('Error loading last accessed:', {
-          error: error,
-          message: error.message,
-          stack: error.stack
-        });
-        setContinueLearning(null);
-      }
+      setStreak(streakData?.streak_count || 0);
+      setContinueLearning(lastAccessedData);
+      setUserProfile(profileData);
 
-      try {
-        const profileData = await userService.getCurrentUser();
-        console.log('Profile data loaded:', profileData);
-        setUserProfile(profileData);
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        setUserProfile(null);
-      }
+      console.log('Home data loaded:', {
+        streak: streakData?.streak_count,
+        hasLastAccessed: !!lastAccessedData,
+        lastAccessedName: lastAccessedData?.name,
+        hasProfile: !!profileData
+      });
     } catch (error) {
       console.error('Error in loadData:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, []);
 
   if (loading) {
     return (
@@ -192,48 +166,62 @@ const HomeScreen = ({ navigation }) => {
           <AnimatedView animation="slide" delay={400}>
             <View style={styles.continueContainer}>
               <Text style={styles.sectionTitle}>
-                {continueLearning.last_session ? 'Continue Learning' : 'Recent Subspace'}
+                {continueLearning.id ? 'Continue Learning' : 'Start Learning'}
               </Text>
               <TouchableOpacity
                 style={styles.continueCard}
                 onPress={() => {
-                  console.log('Navigating to subspace:', {
-                    subjectId: continueLearning.subject?.id,
-                    subspaceId: continueLearning.id,
-                    subspaceName: continueLearning.name,
-                    subjectName: continueLearning.subject?.name
-                  });
-                  navigation.navigate('Subspace', {
-                    subjectId: continueLearning.subject?.id,
-                    subspaceId: continueLearning.id,
-                    subspaceName: continueLearning.name,
-                    subjectName: continueLearning.subject?.name
-                  });
+                  if (continueLearning.id) {
+                    console.log('Navigating to subspace:', {
+                      subjectId: continueLearning.subject?.id,
+                      subspaceId: continueLearning.id,
+                      subspaceName: continueLearning.name,
+                      subjectName: continueLearning.subject?.name,
+                      totalTime: continueLearning.total_time_spent
+                    });
+                    navigation.navigate('Subspace', {
+                      subjectId: continueLearning.subject?.id,
+                      subspaceId: continueLearning.id,
+                      subspaceName: continueLearning.name,
+                      subjectName: continueLearning.subject?.name
+                    });
+                  } else {
+                    // Navigate to subject to create first subspace
+                    navigation.navigate('Subjects');
+                  }
                 }}
               >
                 <View style={styles.continueContent}>
                   <View style={styles.continueHeader}>
-                    <Text style={styles.continueTitle}>{continueLearning.name || 'Untitled Subspace'}</Text>
-                    <Text style={styles.continueSubject}>{continueLearning.subject?.name || 'Untitled Subject'}</Text>
+                    <Text style={styles.continueTitle}>
+                      {continueLearning.id 
+                        ? continueLearning.name 
+                        : 'Create Your First Subspace'}
+                    </Text>
+                    <Text style={styles.continueSubject}>
+                      {continueLearning.id
+                        ? continueLearning.subject?.name
+                        : continueLearning.subject?.name || 'Begin your learning journey'}
+                    </Text>
                   </View>
                   
                   <View style={styles.statsContainer}>
                     <View style={styles.statItem}>
                       <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
                       <Text style={styles.statText}>
-                        {continueLearning.total_time_spent 
+                        {continueLearning.total_time_spent > 0 
                           ? `${Math.round(continueLearning.total_time_spent)} mins spent`
                           : 'No time logged yet'}
                       </Text>
                     </View>
                     <View style={styles.statItem}>
                       <Ionicons 
-                        name={continueLearning.last_session ? "time" : "play-circle"}
+                        name={continueLearning.id ? "time" : "add-circle"}
                         size={16} 
                         color={colors.primary}
                       />
                       <Text style={[styles.statText, { color: colors.primary }]}>
-                        {continueLearning.last_session ? 'Continue Learning' : 'Start Learning'}
+                        {continueLearning.id ? 'Continue Learning' : 'Create Subspace'}
                       </Text>
                     </View>
                   </View>
