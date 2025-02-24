@@ -13,18 +13,67 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
 import { chatService } from '../../services/chatService';
+import { subjectService } from '../../services/subjectService';
 import { useAuth } from '../../hooks/useAuth';
 import ChatBubble from '../../components/chat/ChatBubble';
 
-const ChatScreen = () => {
+const ChatScreen = ({ route, navigation }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [currentSession, setCurrentSession] = useState(null);
   const { user } = useAuth();
+  const { subspaceId } = route.params;
 
   useEffect(() => {
     loadChatHistory();
+    startSession();
+
+    // Clean up function to end session when leaving
+    return () => {
+      if (currentSession?.id) {
+        console.log('Ending session on cleanup:', currentSession.id);
+        endSession(currentSession.id);
+      }
+    };
   }, []);
+
+  const startSession = async () => {
+    try {
+      // Check if there's already an active session
+      const activeSession = await subjectService.getActiveSession(subspaceId);
+      if (activeSession) {
+        console.log('Resuming active session:', activeSession.id);
+        setCurrentSession(activeSession);
+        return;
+      }
+
+      // Start new session
+      const session = await subjectService.startLearningSession(subspaceId);
+      console.log('Started new learning session:', {
+        id: session.id,
+        subspaceId: session.subspace_id,
+        startTime: session.start_time
+      });
+      setCurrentSession(session);
+    } catch (error) {
+      console.error('Error starting learning session:', error);
+    }
+  };
+
+  const endSession = async (sessionId) => {
+    try {
+      const session = await subjectService.endLearningSession(sessionId);
+      console.log('Ended learning session:', {
+        id: session.id,
+        duration: session.duration_minutes,
+        startTime: session.start_time,
+        endTime: session.end_time
+      });
+    } catch (error) {
+      console.error('Error ending learning session:', error);
+    }
+  };
 
   const loadChatHistory = async () => {
     try {
@@ -65,12 +114,28 @@ const ChatScreen = () => {
     }
   };
 
+  // Add a back button handler to ensure session ends
+  const handleBack = async () => {
+    if (currentSession?.id) {
+      console.log('Ending session on back:', currentSession.id);
+      await endSession(currentSession.id);
+    }
+    navigation.goBack();
+  };
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>AI Chat</Text>
+      </View>
+
       <FlatList
         data={messages}
         keyExtractor={item => item.id.toString()}
@@ -111,6 +176,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  headerTitle: {
+    ...typography.h2,
+    color: colors.text,
+    marginLeft: spacing.md,
   },
   messagesContainer: {
     padding: spacing.md,

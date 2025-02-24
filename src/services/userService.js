@@ -50,9 +50,16 @@ export const userService = {
         metadata: userData.metadata ? 'provided' : 'missing'
       });
 
+      // Validate email format
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(userData.email)) {
+        console.error('Invalid email format:', userData.email);
+        throw new Error('Please enter a valid email address');
+      }
+
       // Step 1: Create auth user with metadata
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: userData.email,
+        email: userData.email.toLowerCase().trim(),
         password: userData.password,
         options: {
           data: {
@@ -85,9 +92,9 @@ export const userService = {
       try {
         const profileData = {
           id: authData.user.id,
-          email: userData.email.toLowerCase(),
-          username: userData.metadata.username,
-          full_name: userData.metadata.full_name,
+          email: userData.email.toLowerCase().trim(),
+          username: userData.metadata.username.toLowerCase().trim(),
+          full_name: userData.metadata.full_name.trim(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           streak_count: 1,
@@ -98,7 +105,11 @@ export const userService = {
           age: userData.metadata.age || null
         };
 
-        console.log('Creating user profile:', { ...profileData, id: 'HIDDEN' });
+        console.log('Creating user profile with data:', {
+          ...profileData,
+          id: 'HIDDEN',
+          email: 'HIDDEN'
+        });
 
         const { data: profile, error: profileError } = await supabase
           .from('users')
@@ -107,18 +118,38 @@ export const userService = {
           .single();
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          console.error('Profile creation error:', {
+            error: profileError,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            code: profileError.code
+          });
           await supabase.auth.signOut();
-          throw profileError;
+          throw new Error(`Failed to create user profile: ${profileError.message}`);
         }
 
-        console.log('User profile created successfully');
+        if (!profile) {
+          console.error('No profile data returned after creation');
+          await supabase.auth.signOut();
+          throw new Error('Failed to create user profile: No data returned');
+        }
+
+        console.log('User profile created successfully:', {
+          id: 'HIDDEN',
+          username: profile.username
+        });
+        
         return { data: { user: authData.user, profile } };
 
       } catch (profileError) {
-        console.error('Error creating user profile:', profileError);
+        console.error('Error creating user profile:', {
+          error: profileError,
+          message: profileError.message,
+          stack: profileError.stack
+        });
         await supabase.auth.signOut();
-        throw new Error('Failed to create user profile');
+        throw new Error(`Failed to create user profile: ${profileError.message}`);
       }
 
     } catch (error) {

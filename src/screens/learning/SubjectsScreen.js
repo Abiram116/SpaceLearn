@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
@@ -220,89 +221,117 @@ const SubjectsScreen = ({ navigation }) => {
 
   const renderSubject = ({ item, index }) => (
     <AnimatedView animation="slide" delay={index * 100}>
-      <Card style={styles.subjectCard}>
+      <TouchableOpacity 
+        style={[
+          styles.subjectCard,
+          expandedSubject === item.id && styles.expandedCard
+        ]}
+        onPress={() => {
+          setExpandedSubject(expandedSubject === item.id ? null : item.id);
+          if (!subspaces[item.id]) {
+            loadSubspaces(item.id);
+          }
+        }}
+        activeOpacity={0.7}
+      >
         <View style={styles.subjectHeader}>
-          {editingSubject?.id === item.id ? (
-            <TextInput
-              ref={inputRef}
-              style={styles.editInput}
-              value={editingSubject.name}
-              onChangeText={(text) => setEditingSubject({ ...editingSubject, name: text })}
-              onBlur={() => handleUpdateSubject(item.id, editingSubject.name)}
-              autoFocus
-            />
-          ) : (
-            <TouchableOpacity 
-              style={styles.subjectTitle}
-              onPress={() => {
-                setExpandedSubject(expandedSubject === item.id ? null : item.id);
-                if (!subspaces[item.id]) {
-                  loadSubspaces(item.id);
-                }
-              }}
-            >
+          <View style={styles.subjectTitleContainer}>
+            <View style={styles.iconContainer}>
               <Ionicons
-                name={expandedSubject === item.id ? 'chevron-down' : 'chevron-forward'}
+                name={expandedSubject === item.id ? 'book' : 'book-outline'}
                 size={24}
                 color={colors.primary}
               />
+            </View>
+            {editingSubject?.id === item.id ? (
+              <TextInput
+                ref={inputRef}
+                style={styles.editInput}
+                value={editingSubject.name}
+                onChangeText={(text) => setEditingSubject({ ...editingSubject, name: text })}
+                onBlur={() => handleUpdateSubject(item.id, editingSubject.name)}
+                autoFocus
+              />
+            ) : (
               <Text style={styles.subjectName}>{item.name}</Text>
-            </TouchableOpacity>
-          )}
+            )}
+          </View>
+          
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              onPress={() => setEditingSubject({ id: item.id, name: item.name })}
               style={styles.actionButton}
+              onPress={() => setEditingSubject({ id: item.id, name: item.name })}
             >
-              <Ionicons name="pencil" size={20} color={colors.primary} />
+              <Ionicons name="pencil" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => handleDeleteSubject(item.id)}
               style={styles.actionButton}
+              onPress={() => handleDeleteSubject(item.id)}
             >
-              <Ionicons name="trash" size={20} color={colors.error} />
+              <Ionicons name="trash-outline" size={18} color={colors.error} />
             </TouchableOpacity>
+            <Ionicons
+              name={expandedSubject === item.id ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={colors.textSecondary}
+            />
           </View>
         </View>
 
         {expandedSubject === item.id && (
-          <View style={styles.subspacesContainer}>
+          <View style={styles.subspaceContainer}>
             {loadingSubspaces[item.id] ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator color={colors.primary} style={styles.loader} />
             ) : (
               <>
-                {subspaces[item.id]?.map(subspace => (
+                {subspaces[item.id]?.map((subspace, subspaceIndex) => (
                   <TouchableOpacity
                     key={subspace.id}
-                    style={styles.subspaceItem}
+                    style={styles.subspaceCard}
                     onPress={() => handleSubspacePress(subspace, item)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={styles.subspaceName}>{subspace.name}</Text>
+                    <View style={styles.subspaceContent}>
+                      <View style={styles.subspaceTitleContainer}>
+                        <Ionicons name="cube-outline" size={20} color={colors.primary} />
+                        <Text style={styles.subspaceName}>{subspace.name}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.deleteSubspace}
+                        onPress={() => handleDeleteSubspace(item.id, subspace.id)}
+                      >
+                        <Ionicons name="close-circle-outline" size={20} color={colors.error} />
+                      </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
                 ))}
+                
+                <View style={styles.addSubspaceContainer}>
+                  <TextInput
+                    ref={subspaceInputRef}
+                    style={styles.subspaceInput}
+                    placeholder="Add new subspace..."
+                    placeholderTextColor={colors.textTertiary}
+                    value={newSubspaceName}
+                    onChangeText={setNewSubspaceName}
+                    onSubmitEditing={() => handleCreateSubspace(item.id)}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.addSubspaceButton,
+                      !newSubspaceName.trim() && styles.disabledButton
+                    ]}
+                    onPress={() => handleCreateSubspace(item.id)}
+                    disabled={!newSubspaceName.trim()}
+                  >
+                    <Ionicons name="add" size={24} color={colors.white} />
+                  </TouchableOpacity>
+                </View>
               </>
             )}
-            <View style={styles.addSubspaceContainer}>
-              <Input
-                ref={subspaceInputRef}
-                icon="bookmark-outline"
-                placeholder="New subspace name"
-                value={newSubspaceName}
-                onChangeText={setNewSubspaceName}
-                onSubmitEditing={() => handleCreateSubspace(item.id)}
-                returnKeyType="done"
-                containerStyle={styles.subspaceInput}
-              />
-              <Button
-                title="Add"
-                onPress={() => handleCreateSubspace(item.id)}
-                variant="outline"
-                size="small"
-              />
-            </View>
           </View>
         )}
-      </Card>
+      </TouchableOpacity>
     </AnimatedView>
   );
 
@@ -315,63 +344,52 @@ const SubjectsScreen = ({ navigation }) => {
   }
 
   return (
-    <KeyboardAwareView>
-      <View style={styles.container}>
-        <AnimatedView animation="fade">
-          {/* <View style={[styles.header, { paddingTop: safeAreaInsets.top }]}> // Removed */}
-          {/*   <Text style={styles.headerTitle}>Your Subjects</Text> // Removed */}
-          {/*   <Text style={styles.headerSubtitle}>Create and organize your learning spaces</Text> // Removed */}
-          {/* </View> // Removed */}
-        </AnimatedView>
+    <KeyboardAwareView style={styles.container}>
+      <View style={styles.content}>
+        <View style={[styles.addSubjectContainer, { marginTop: safeAreaInsets.top + spacing.md }]}>
+          <TextInput
+            style={styles.addSubjectInput}
+            placeholder="Add new subject..."
+            placeholderTextColor={colors.textTertiary}
+            value={newSubjectName}
+            onChangeText={setNewSubjectName}
+            onSubmitEditing={handleCreateSubject}
+          />
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              !newSubjectName.trim() && styles.disabledButton
+            ]}
+            onPress={handleCreateSubject}
+            disabled={!newSubjectName.trim()}
+          >
+            <Ionicons name="add" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
 
-        <AnimatedView animation="slide" delay={200}>
-          <View style={styles.inputContainer}>
-            <Input
-              ref={inputRef}
-              icon="library-outline"
-              placeholder="Enter new subject name"
-              value={newSubjectName}
-              onChangeText={setNewSubjectName}
-              onSubmitEditing={handleCreateSubject}
-              returnKeyType="done"
-              blurOnSubmit={true}
-              error={error}
-              containerStyle={styles.newSubjectInput}
-            />
-            <Button
-              title="Create"
-              onPress={handleCreateSubject}
-              disabled={!newSubjectName.trim() || loading}
-              loading={loading}
-              style={styles.createButton}
-            />
-          </View>
-        </AnimatedView>
-
-        {subjects.length === 0 ? (
-          <AnimatedView animation="scale" delay={300} style={styles.emptyContainer}>
-            <Ionicons 
-              name="library-outline" 
-              size={64} 
-              color={colors.primary} 
-              style={styles.emptyIcon} 
-            />
-            <Text style={styles.emptyText}>No subjects yet</Text>
-            <Text style={styles.emptySubtext}>
-              Create your first subject to get started!
-            </Text>
-          </AnimatedView>
+        {loading ? (
+          <ActivityIndicator color={colors.primary} style={styles.loader} />
         ) : (
           <FlatList
             data={subjects}
             renderItem={renderSubject}
-            keyExtractor={item => item.id.toString()}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={colors.primary}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="library-outline" size={48} color={colors.textTertiary} />
+                <Text style={styles.emptyText}>No subjects yet</Text>
+                <Text style={styles.emptySubtext}>Add your first subject to start learning</Text>
+              </View>
+            }
           />
         )}
       </View>
@@ -382,28 +400,32 @@ const SubjectsScreen = ({ navigation }) => {
         animationType="fade"
         onRequestClose={() => setShowDeleteModal(false)}
       >
-        <AnimatedView animation="scale" style={styles.modalOverlay}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDeleteModal(false)}
+        >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirm Deletion</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to delete this {deleteTarget?.type}?
+            <Text style={styles.modalTitle}>Confirm Delete</Text>
+            <Text style={styles.modalText}>
+              Are you sure you want to delete this {deleteTarget?.type}? This action cannot be undone.
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowDeleteModal(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.deleteButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
                 onPress={confirmDelete}
               >
                 <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </AnimatedView>
+        </TouchableOpacity>
       </Modal>
     </KeyboardAwareView>
   );
@@ -413,187 +435,212 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 0,
   },
-  header: {
-    paddingHorizontal: spacing.contentHorizontal,
-    paddingTop: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
   },
-  headerTitle: {
-    ...typography.h2,
+  addSubjectContainer: {
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  addSubjectInput: {
+    flex: 1,
+    height: 50,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.lg,
+    ...typography.body,
     color: colors.text,
   },
-  headerSubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  centered: {
-    flex: 1,
+  addButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  newSubjectInput: {
-    flex: 1,
+  disabledButton: {
+    opacity: 0.5,
   },
   list: {
-    paddingHorizontal: spacing.contentHorizontal,
-    paddingTop: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl,
+    paddingBottom: spacing.xl,
   },
   subjectCard: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.xl,
     marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  expandedCard: {
+    backgroundColor: colors.cardSelected,
   },
   subjectHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
   },
-  subjectTitle: {
-    flex: 1,
+  subjectTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
   subjectName: {
     ...typography.h3,
     color: colors.text,
-    marginLeft: spacing.sm,
+    flex: 1,
   },
   actionButtons: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   actionButton: {
-    padding: spacing.sm,
+    padding: spacing.xs,
   },
   editInput: {
-    flex: 1,
     ...typography.h3,
     color: colors.text,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.primary,
-    marginRight: spacing.md,
+    flex: 1,
+    padding: 0,
   },
-  subspacesContainer: {
-    marginTop: spacing.md,
-    paddingLeft: spacing.xl,
+  subspaceContainer: {
+    padding: spacing.lg,
+    paddingTop: 0,
   },
-  subspaceItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
+  subspaceCard: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm,
   },
   subspaceContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: spacing.md,
+  },
+  subspaceTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+    gap: spacing.sm,
   },
   subspaceName: {
     ...typography.body,
     color: colors.text,
-    marginLeft: spacing.sm,
+  },
+  deleteSubspace: {
+    padding: spacing.xs,
   },
   addSubspaceContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   subspaceInput: {
     flex: 1,
-    marginRight: spacing.sm,
+    height: 40,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    ...typography.body,
+    color: colors.text,
+  },
+  addSubspaceButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyIcon: {
-    marginBottom: spacing.md,
+    paddingVertical: spacing.xxl,
   },
   emptyText: {
     ...typography.h2,
-    color: colors.text,
-    marginBottom: spacing.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   emptySubtext: {
     ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  createButton: {
-    marginLeft: spacing.sm,
-    alignSelf: 'center',
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
   },
   modalContent: {
     backgroundColor: colors.card,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
     width: '80%',
-    maxWidth: 300,
-    ...shadows.large,
-    borderWidth: 1,
-    borderColor: colors.border,
+    maxWidth: 400,
   },
   modalTitle: {
-    ...typography.h3,
+    ...typography.h2,
     color: colors.text,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
+    marginBottom: spacing.md,
   },
-  modalMessage: {
+  modalText: {
     ...typography.body,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    justifyContent: 'flex-end',
+    gap: spacing.md,
   },
   modalButton: {
-    flex: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
   },
   cancelButton: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.cardSelected,
   },
   deleteButton: {
     backgroundColor: colors.error,
   },
   cancelButtonText: {
-    ...typography.body,
+    ...typography.button,
     color: colors.text,
-    fontWeight: '600',
   },
   deleteButtonText: {
-    ...typography.body,
-    color: colors.background,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.white,
+  },
+  loader: {
+    marginTop: spacing.xl,
   },
 });
 
