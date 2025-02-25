@@ -94,6 +94,174 @@ What specific area would you like help with?`;
 
   // Define expanded topic-specific responses
   const topicResponses = {
+    general: [
+      `Let me help you understand ${prompt}:
+
+1. Overview
+   • Basic concepts
+   • Common misconceptions
+   • Real-world relevance
+
+2. Key Points
+   • Main ideas
+   • Important factors
+   • Critical considerations
+
+3. Practical Applications
+   • Everyday examples
+   • Common situations
+   • Personal relevance
+
+4. Tips & Strategies
+   • Best practices
+   • Helpful approaches
+   • Problem-solving methods
+
+5. Further Learning
+   • Related topics
+   • Additional resources
+   • Next steps`,
+
+      `Here's a comprehensive explanation of ${prompt}:
+
+1. Understanding the Basics
+   • What it means
+   • Why it matters
+   • How it works
+
+2. Common Scenarios
+   • Everyday situations
+   • Typical challenges
+   • Practical solutions
+
+3. Important Considerations
+   • Key factors
+   • Common pitfalls
+   • Success strategies
+
+4. Making it Work
+   • Implementation steps
+   • Useful techniques
+   • Helpful tools
+
+5. Going Further
+   • Advanced aspects
+   • Related concepts
+   • Learning resources`
+    ],
+
+    conceptual: [
+      `Let's explore the concept of ${prompt}:
+
+1. Core Principles
+   • Fundamental ideas
+   • Key theories
+   • Basic framework
+
+2. Understanding Context
+   • Historical background
+   • Current perspectives
+   • Future implications
+
+3. Critical Analysis
+   • Main arguments
+   • Different viewpoints
+   • Key debates
+
+4. Practical Significance
+   • Real-world impact
+   • Applications
+   • Benefits and challenges
+
+5. Deeper Insights
+   • Advanced concepts
+   • Interconnections
+   • Emerging trends`,
+
+      `Here's a deep dive into ${prompt}:
+
+1. Theoretical Framework
+   • Basic principles
+   • Core concepts
+   • Underlying theories
+
+2. Analysis & Interpretation
+   • Different approaches
+   • Various perspectives
+   • Critical thinking
+
+3. Practical Context
+   • Real-world examples
+   • Case studies
+   • Applied scenarios
+
+4. Implications & Impact
+   • Social aspects
+   • Cultural factors
+   • Future directions
+
+5. Advanced Understanding
+   • Complex relationships
+   • Emerging research
+   • New developments`
+    ],
+
+    everyday: [
+      `Let me explain ${prompt} in practical terms:
+
+1. Daily Life Impact
+   • Common situations
+   • Regular encounters
+   • Practical effects
+
+2. Understanding the Basics
+   • Simple explanations
+   • Easy examples
+   • Clear illustrations
+
+3. Helpful Tips
+   • Practical advice
+   • Useful strategies
+   • Quick solutions
+
+4. Common Challenges
+   • Typical problems
+   • Simple fixes
+   • Prevention methods
+
+5. Making it Better
+   • Improvement ideas
+   • Easy changes
+   • Helpful habits`,
+
+      `Here's how to understand ${prompt} in everyday life:
+
+1. Practical Overview
+   • What you need to know
+   • Why it matters
+   • How it affects you
+
+2. Daily Applications
+   • Regular uses
+   • Common situations
+   • Practical examples
+
+3. Simple Solutions
+   • Easy approaches
+   • Quick fixes
+   • Helpful methods
+
+4. Better Results
+   • Improvement tips
+   • Success strategies
+   • Useful habits
+
+5. Next Steps
+   • Further learning
+   • Additional resources
+   • Advanced topics`
+    ],
+
     math: [
       `Let's explore ${prompt} through these key mathematical concepts:
 1. Core Definitions and Principles
@@ -284,16 +452,16 @@ class DataProcessor:
             Dict containing processing results and metadata
         """
         try:
-            # Validate input
+            // Validate input
             self._validate_input(data)
             
-            # Process in batches
+            // Process in batches
             batches = self._create_batches(data)
             results = await asyncio.gather(
                 *[self._process_batch(batch) for batch in batches]
             )
             
-            # Aggregate results
+            // Aggregate results
             final_result = self._aggregate_results(results)
             
             return {
@@ -419,7 +587,7 @@ async fn main() -> Result<()> {
     ],
   };
 
-  // Improved follow-up questions
+  // Enhanced follow-up questions with more variety
   const followUps = [
     "\n\nWould you like me to provide more specific examples or explain any concept in greater detail?",
     "\n\nShall we explore the practical applications of these concepts through some hands-on exercises?",
@@ -428,6 +596,11 @@ async fn main() -> Result<()> {
     "\n\nWould you like to test your understanding with some practice problems?",
     "\n\nIs there a specific part you'd like me to elaborate on?",
     "\n\nShall we explore some advanced topics related to this subject?",
+    "\n\nWould you like to see some everyday examples of this concept?",
+    "\n\nShall we discuss how this relates to your daily life?",
+    "\n\nWould you like to explore the practical implications of this topic?",
+    "\n\nShall we look at some common misconceptions about this subject?",
+    "\n\nWould you like some tips on how to apply this knowledge effectively?"
   ];
 
   // Get responses based on query type
@@ -438,10 +611,20 @@ async fn main() -> Result<()> {
       ...topicResponses.programming.python,
       ...topicResponses.programming.rust,
     ];
+  } else if (userPrompt.includes('what is') || 
+             userPrompt.includes('how does') || 
+             userPrompt.includes('why do') || 
+             userPrompt.includes('explain')) {
+    responses = [...topicResponses.conceptual];
+  } else if (userPrompt.includes('daily') || 
+             userPrompt.includes('life') || 
+             userPrompt.includes('everyday') || 
+             userPrompt.includes('common')) {
+    responses = [...topicResponses.everyday];
   } else if (mainTopic in topicResponses) {
     responses = topicResponses[mainTopic];
   } else {
-    responses = topicResponses.computerScience;
+    responses = [...topicResponses.general];
   }
 
   return responses[Math.floor(Math.random() * responses.length)] + 
