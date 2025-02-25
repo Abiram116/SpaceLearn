@@ -264,16 +264,19 @@ const SubspaceScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
       const response = await subjectService.getSubspaces(subjectId);
+      console.log('Fetched subspaces:', response);
       const currentSubspace = response.find(s => s.id === subspaceId);
       
       if (currentSubspace) {
+        console.log('Current subspace:', currentSubspace);
         setSubspace(currentSubspace);
+
         // Store this as the last accessed subspace
         try {
           await subjectService.updateLastAccessedId(currentSubspace.full_sequence_id);
           console.log('Updated last accessed sequence:', currentSubspace.full_sequence_id);
         } catch (updateError) {
-          console.error('Error updating last accessed sequence:', updateError);
+          console.error('Error updating last accessed sequence:', updateError.message);
         }
 
         // Update last accessed timestamp
@@ -297,16 +300,18 @@ const SubspaceScreen = ({ route, navigation }) => {
             .select();
 
           if (error) {
-            console.error('Error updating learning session:', error);
+            console.error('Error updating learning session:', error.message);
           } else {
             console.log('Successfully updated learning session:', data);
           }
         } catch (updateError) {
-          console.error('Error in learning session update:', updateError);
+          console.error('Error in learning session update:', updateError.message);
         }
+      } else {
+        console.warn('Subspace not found in response');
       }
     } catch (error) {
-      console.error('Error loading subspace:', error);
+      console.error('Error loading subspace:', error.message);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -409,6 +414,93 @@ const SubspaceScreen = ({ route, navigation }) => {
     Alert.alert('Success', 'Code copied to clipboard!');
   };
 
+  const startLearningSession = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('learning_sessions')
+        .insert({
+          user_id: user.id,
+          subject_id: subjectId,
+          subspace_id: subspaceId,
+          duration_minutes: 0,
+          start_time: new Date().toISOString(),
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('Started learning session:', data);
+      return data;
+    } catch (error) {
+      console.error('Error starting learning session:', error);
+      throw error;
+    }
+  };
+
+  const endLearningSession = async (sessionId) => {
+    try {
+      const now = new Date();
+      const { data: session, error: sessionError } = await supabase
+        .from('learning_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        throw new Error('Session not found or unauthorized');
+      }
+
+      const startTime = new Date(session.start_time);
+      const durationMinutes = Math.max(0.5, (now - startTime) / (1000 * 60)); // Minimum 30 seconds
+
+      const { data: updatedSession, error: updateError } = await supabase
+        .from('learning_sessions')
+        .update({
+          duration_minutes: durationMinutes,
+          updated_at: now.toISOString(),
+          is_active: false,
+          end_time: now.toISOString()
+        })
+        .eq('id', sessionId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      console.log('Updated session duration:', {
+        id: updatedSession.id,
+        duration: updatedSession.duration_minutes,
+        startTime: updatedSession.start_time,
+        endTime: updatedSession.end_time
+      });
+
+      return updatedSession;
+    } catch (error) {
+      console.error('Error in endLearningSession:', error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    let sessionId;
+    const startSession = async () => {
+      const session = await startLearningSession();
+      sessionId = session.id;
+    };
+
+    startSession();
+
+    return () => {
+      if (sessionId) {
+        endLearningSession(sessionId);
+      }
+    };
+  }, [subjectId, subspaceId]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -430,13 +522,13 @@ const SubspaceScreen = ({ route, navigation }) => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>{route.params?.subspaceName || subspace?.name || 'Loading...'}</Text>
-          <Text style={styles.headerSubtitle}>{route.params?.subjectName || 'Loading...'}</Text>
+          <Text style={styles.headerSubtitle}>Total Time Spent: {subspace?.total_time_spent || 0} minutes</Text>
         </View>
       </View>
       <KeyboardAvoidingView 
         style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={styles.content}>
           <ScrollView
@@ -535,7 +627,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   chatContent: {
-    paddingVertical: spacing.md,
+    // paddingVertical: spacing.md,
   },
   loadingMore: {
     padding: spacing.md,
@@ -633,7 +725,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     ...shadows.medium,
   },
   input: {
@@ -642,14 +735,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     minHeight: 40,
     maxHeight: 100,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: Platform.OS === 'ios' ? spacing.xs : 0,
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
   },
   sendButton: {
-    padding: spacing.sm,
-    marginLeft: spacing.sm,
+    padding: spacing.xs,
+    marginLeft: spacing.xs,
     borderRadius: borderRadius.full,
     backgroundColor: colors.background,
     ...shadows.small,
@@ -701,6 +794,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  subspaceName: {
+    ...typography.h1,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  timeSpent: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
 });
 

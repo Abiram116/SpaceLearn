@@ -45,14 +45,23 @@ export const subjectService = {
         return [];
       }
 
+      // Add logging to verify data structure
+      console.log('Fetched subjects data:', data);
+
       // Calculate total time for each subject
-      const subjectsWithTime = data.map(subject => ({
-        ...subject,
-        total_time_spent: subject.learning_sessions?.reduce(
+      const subjectsWithTime = data.map(subject => {
+        const totalTime = subject.learning_sessions?.reduce(
           (sum, session) => sum + (session.duration_minutes || 0), 
           0
-        ) || 0
-      }));
+        ) || 0;
+
+        console.log(`Subject: ${subject.name}, Total Time: ${totalTime}`);
+
+        return {
+          ...subject,
+          total_time_spent: totalTime
+        };
+      });
 
       console.log('Found subjects with time:', {
         userId: user.id,
@@ -158,14 +167,23 @@ export const subjectService = {
         throw error;
       }
 
+      // Add logging to verify data structure
+      console.log('Fetched subspaces data:', data);
+
       // Calculate total time for each subspace
-      const subspacesWithTime = data.map(subspace => ({
-        ...subspace,
-        total_time_spent: subspace.learning_sessions?.reduce(
+      const subspacesWithTime = data.map(subspace => {
+        const totalTime = subspace.learning_sessions?.reduce(
           (sum, session) => sum + (session.duration_minutes || 0),
           0
-        ) || 0
-      }));
+        ) || 0;
+
+        console.log(`Subspace: ${subspace.name}, Total Time: ${totalTime}`);
+
+        return {
+          ...subspace,
+          total_time_spent: totalTime
+        };
+      });
 
       console.log('Found subspaces with time:', {
         subjectId,

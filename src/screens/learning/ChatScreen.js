@@ -156,10 +156,10 @@ const ChatScreen = ({ route, navigation }) => {
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
         >
           <View style={styles.inputWrapper}>
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, { paddingBottom: spacing.sm }]}>
               <TextInput
                 style={styles.input}
                 value={message}
