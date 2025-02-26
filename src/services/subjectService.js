@@ -480,25 +480,25 @@ export const subjectService = {
       });
 
       // Create a new learning session
-      const { data: session, error: sessionError } = await supabase
-        .from('learning_sessions')
-        .insert({
-          user_id: user.id,
-          subject_id: subspace.subject_id,
-          subspace_id: subspaceId,
-          duration_minutes: 0.5,
-          created_at: now,
-          updated_at: now
-        })
-        .select()
-        .single();
+      // const { data: session, error: sessionError } = await supabase
+      //   .from('learning_sessions')
+      //   .insert({
+      //     user_id: user.id,
+      //     subject_id: subspace.subject_id,
+      //     subspace_id: subspaceId,
+      //     duration_minutes: 0.5,
+      //     created_at: now,
+      //     updated_at: now
+      //   })
+      //   .select()
+      //   .single();
 
-      if (sessionError) throw sessionError;
+      // if (sessionError) throw sessionError;
 
-      console.log('Created new learning session:', {
-        id: session.id,
-        created_at: session.created_at
-      });
+      // console.log('Created new learning session:', {
+      //   id: session.id,
+      //   created_at: session.created_at
+      // });
 
       return updatedSubspace;
     } catch (error) {

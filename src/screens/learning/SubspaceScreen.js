@@ -299,11 +299,11 @@ const SubspaceScreen = ({ route, navigation }) => {
             ])
             .select();
 
-          if (error) {
-            console.error('Error updating learning session:', error.message);
-          } else {
-            console.log('Successfully updated learning session:', data);
-          }
+          //           if (error) {
+          //             console.error('Error updating learning session:', error.message);
+          //           } else {
+          //             console.log('Successfully updated learning session:', data);
+          //           }
         } catch (updateError) {
           console.error('Error in learning session update:', updateError.message);
         }
@@ -414,92 +414,92 @@ const SubspaceScreen = ({ route, navigation }) => {
     Alert.alert('Success', 'Code copied to clipboard!');
   };
 
-  const startLearningSession = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('learning_sessions')
-        .insert({
-          user_id: user.id,
-          subject_id: subjectId,
-          subspace_id: subspaceId,
-          duration_minutes: 0,
-          start_time: new Date().toISOString(),
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+  // const startLearningSession = async () => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('learning_sessions')
+  //       .insert({
+  //         user_id: user.id,
+  //         subject_id: subjectId,
+  //         subspace_id: subspaceId,
+  //         duration_minutes: 0,
+  //         start_time: new Date().toISOString(),
+  //         is_active: true,
+  //         created_at: new Date().toISOString(),
+  //         updated_at: new Date().toISOString()
+  //       })
+  //       .select()
+  //       .single();
 
-      if (error) throw error;
+  //     if (error) throw error;
 
-      console.log('Started learning session:', data);
-      return data;
-    } catch (error) {
-      console.error('Error starting learning session:', error);
-      throw error;
-    }
-  };
+  //     console.log('Started learning session:', data);
+  //     return data;
+  //   } catch (error) {
+  //     console.error('Error starting learning session:', error);
+  //     throw error;
+  //   }
+  // };
 
-  const endLearningSession = async (sessionId) => {
-    try {
-      const now = new Date();
-      const { data: session, error: sessionError } = await supabase
-        .from('learning_sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .single();
+  // const endLearningSession = async (sessionId) => {
+  //   try {
+  //     const now = new Date();
+  //     const { data: session, error: sessionError } = await supabase
+  //       .from('learning_sessions')
+  //       .select('*')
+  //       .eq('id', sessionId)
+  //       .single();
 
-      if (sessionError || !session) {
-        throw new Error('Session not found or unauthorized');
-      }
+  //     if (sessionError || !session) {
+  //       throw new Error('Session not found or unauthorized');
+  //     }
 
-      const startTime = new Date(session.start_time);
-      const durationMinutes = Math.max(0.5, (now - startTime) / (1000 * 60)); // Minimum 30 seconds
+  //     const startTime = new Date(session.start_time);
+  //     const durationMinutes = Math.max(0.5, (now - startTime) / (1000 * 60)); // Minimum 30 seconds
 
-      const { data: updatedSession, error: updateError } = await supabase
-        .from('learning_sessions')
-        .update({
-          duration_minutes: durationMinutes,
-          updated_at: now.toISOString(),
-          is_active: false,
-          end_time: now.toISOString()
-        })
-        .eq('id', sessionId)
-        .select()
-        .single();
+  //     const { data: updatedSession, error: updateError } = await supabase
+  //       .from('learning_sessions')
+  //       .update({
+  //         duration_minutes: durationMinutes,
+  //         updated_at: now.toISOString(),
+  //         is_active: false,
+  //         end_time: now.toISOString()
+  //       })
+  //       .eq('id', sessionId)
+  //       .select()
+  //       .single();
 
-      if (updateError) throw updateError;
+  //     if (updateError) throw updateError;
 
-      console.log('Updated session duration:', {
-        id: updatedSession.id,
-        duration: updatedSession.duration_minutes,
-        startTime: updatedSession.start_time,
-        endTime: updatedSession.end_time
-      });
+  //     console.log('Updated session duration:', {
+  //       id: updatedSession.id,
+  //       duration: updatedSession.duration_minutes,
+  //       startTime: updatedSession.start_time,
+  //       endTime: updatedSession.end_time
+  //     });
 
-      return updatedSession;
-    } catch (error) {
-      console.error('Error in endLearningSession:', error);
-      throw error;
-    }
-  };
+  //     return updatedSession;
+  //   } catch (error) {
+  //     console.error('Error in endLearningSession:', error);
+  //     throw error;
+  //   }
+  // };
 
-  useEffect(() => {
-    let sessionId;
-    const startSession = async () => {
-      const session = await startLearningSession();
-      sessionId = session.id;
-    };
+  // useEffect(() => {
+  //   let sessionId;
+  //   const startSession = async () => {
+  //     const session = await startLearningSession();
+  //     sessionId = session.id;
+  //   };
 
-    startSession();
+  //   startSession();
 
-    return () => {
-      if (sessionId) {
-        endLearningSession(sessionId);
-      }
-    };
-  }, [subjectId, subspaceId]);
+  //   return () => {
+  //     if (sessionId) {
+  //       endLearningSession(sessionId);
+  //     }
+  //   };
+  // }, [subjectId, subspaceId]);
 
   if (loading) {
     return (

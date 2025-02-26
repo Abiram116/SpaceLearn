@@ -494,13 +494,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
       },
-      android: {
-        elevation: 2,
-      },
     }),
   },
   expandedCard: {
-    backgroundColor: colors.cardSelected,
+    backgroundColor: '#f7f7f7',
   },
   subjectHeader: {
     flexDirection: 'row',
@@ -550,7 +547,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   subspaceContainer: {
-    padding: spacing.lg,
+    padding: spacing.md,
     paddingTop: 0,
   },
   subspaceCard: {
@@ -671,6 +668,9 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     fontSize: 12,
+  },
+  chatContainer: {
+    paddingTop: Platform.OS === 'android' ? spacing.lg : 0,
   },
 });
 

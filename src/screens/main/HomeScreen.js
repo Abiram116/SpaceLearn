@@ -213,17 +213,7 @@ const HomeScreen = ({ navigation }) => {
                           ? `${Math.round(continueLearning.total_time_spent)} mins spent`
                           : 'No time logged yet'}
                       </Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <Ionicons 
-                        name={continueLearning.id ? "time" : "add-circle"}
-                        size={16} 
-                        color={colors.primary}
-                      />
-                      <Text style={[styles.statText, { color: colors.primary }]}>
-                        {continueLearning.id ? 'Continue Learning' : 'Create Subspace'}
-                      </Text>
-                    </View>
+                    </View> 
                   </View>
                 </View>
               </TouchableOpacity>

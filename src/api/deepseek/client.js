@@ -2,9 +2,9 @@ const API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY;
 const API_URL = process.env.EXPO_PUBLIC_DEEPSEEK_API_URL;
 const IS_DEV_MODE = true; // Toggle this for development/production
 
-if (!API_KEY || !API_URL) {
-  console.error('Missing DeepSeek API configuration. Please check your .env file.');
-}
+// if (!API_KEY || !API_URL) {
+//   console.error('Missing DeepSeek API configuration. Please check your .env file.');
+// }
 
 const formatCodeBlock = (code, language) => {
   return `\`\`\`${language}
