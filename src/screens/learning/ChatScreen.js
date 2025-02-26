@@ -127,7 +127,11 @@ const ChatScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar 
+        barStyle="dark-content" 
+        backgroundColor={colors.background}
+        translucent={false} 
+      />
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity 
@@ -151,15 +155,43 @@ const ChatScreen = ({ route, navigation }) => {
           )}
           inverted
           contentContainerStyle={styles.messagesContainer}
-          style={styles.messagesList}
+          style={[styles.messagesList, { marginBottom: Platform.OS === 'android' ? 60 : 0 }]}
         />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-        >
-          <View style={styles.inputWrapper}>
-            <View style={[styles.inputContainer, { paddingBottom: spacing.sm }]}>
+        {Platform.OS === 'ios' ? (
+          <KeyboardAvoidingView
+            behavior="padding"
+            keyboardVerticalOffset={0}
+            style={{ width: '100%' }}
+          >
+            <View style={styles.inputWrapper}>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={message}
+                  onChangeText={setMessage}
+                  placeholder="Type your message..."
+                  placeholderTextColor={colors.textSecondary}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity 
+                  style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
+                  onPress={handleSend}
+                  disabled={!message.trim() || loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Ionicons name="send" size={24} color={colors.white} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        ) : (
+          <View style={styles.androidInputWrapper}>
+            <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 value={message}
@@ -182,7 +214,7 @@ const ChatScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -321,17 +353,20 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 5,
+    marginBottom: Platform.OS === 'ios' ? 0 : 0,
   },
   input: {
     flex: 1,
     ...typography.body,
     color: colors.text,
-    minHeight: 40,
+    minHeight: 36,
     maxHeight: 100,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
+    paddingHorizontal: spacing.sm,
+    paddingTop: 0,
+    paddingBottom: 0,
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
   },
@@ -372,11 +407,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: Platform.OS === 'android' ? spacing.md : spacing.sm,
+    height: Platform.OS === 'android' ? 70 : 60,
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    ...shadows.small,
+    ...Platform.select({
+      ios: {
+        ...shadows.small,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   headerTitleContainer: {
     flex: 1,
@@ -385,23 +428,52 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.h2,
     color: colors.text,
-    fontSize: 20,
+    fontSize: 22,
   },
   headerSubtitle: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: 4,
+    fontSize: 13,
   },
   inputWrapper: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.card,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  androidInputWrapper: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.card,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    elevation: 4,
   },
   messagesList: {
     flex: 1,
+    marginTop: 0,
   },
   messagesContainer: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    paddingTop: 0,
   },
 });
 

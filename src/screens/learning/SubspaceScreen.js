@@ -511,7 +511,11 @@ const SubspaceScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar 
+        barStyle="dark-content" 
+        backgroundColor={colors.background} 
+        translucent={false}
+      />
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()} 
@@ -525,70 +529,133 @@ const SubspaceScreen = ({ route, navigation }) => {
           <Text style={styles.headerSubtitle}>Total Time Spent: {subspace?.total_time_spent || 0} minutes</Text>
         </View>
       </View>
-      <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        <View style={styles.content}>
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.chatContainer}
-            contentContainerStyle={styles.chatContent}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-            onScroll={({ nativeEvent }) => {
-              if (nativeEvent.contentOffset.y === 0) {
-                handleLoadMore();
-              }
-            }}
-            scrollEventThrottle={400}
-          >
-            {loadingMore && (
-              <ActivityIndicator style={styles.loadingMore} size="small" color={colors.primary} />
-            )}
-            
-            {messages.map(message => (
-              <Message
-                key={message.id}
-                message={message}
-                onCopyCode={handleCopyCode}
-              />
-            ))}
-            
-            {sending && (
-              <View style={styles.typingIndicator}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.typingText}>AI is typing...</Text>
-              </View>
-            )}
-          </ScrollView>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Type your message..."
-              multiline
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!newMessage.trim() || sending) && styles.sendButtonDisabled
-              ]}
-              onPress={handleSend}
-              disabled={!newMessage.trim() || sending}
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView 
+          style={styles.container} 
+          behavior="padding"
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.content}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.chatContainer}
+              contentContainerStyle={styles.chatContent}
+              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+              onScroll={({ nativeEvent }) => {
+                if (nativeEvent.contentOffset.y === 0) {
+                  handleLoadMore();
+                }
+              }}
+              scrollEventThrottle={400}
             >
-              <Ionicons 
-                name="send" 
-                size={24} 
-                color={!newMessage.trim() || sending ? colors.textSecondary : colors.primary} 
+              {loadingMore && (
+                <ActivityIndicator style={styles.loadingMore} size="small" color={colors.primary} />
+              )}
+              
+              {messages.map(message => (
+                <Message
+                  key={message.id}
+                  message={message}
+                  onCopyCode={handleCopyCode}
+                />
+              ))}
+              
+              {sending && (
+                <View style={styles.typingIndicator}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.typingText}>AI is typing...</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder="Type your message..."
+                multiline
+                editable={!isLoading}
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!newMessage.trim() || sending) && styles.sendButtonDisabled
+                ]}
+                onPress={handleSend}
+                disabled={!newMessage.trim() || sending}
+              >
+                <Ionicons 
+                  name="send" 
+                  size={24} 
+                  color={!newMessage.trim() || sending ? colors.textSecondary : colors.primary} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.container}>
+          <View style={styles.content}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={[styles.chatContainer, { marginBottom: 70 }]}
+              contentContainerStyle={styles.chatContent}
+              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+              onScroll={({ nativeEvent }) => {
+                if (nativeEvent.contentOffset.y === 0) {
+                  handleLoadMore();
+                }
+              }}
+              scrollEventThrottle={400}
+            >
+              {loadingMore && (
+                <ActivityIndicator style={styles.loadingMore} size="small" color={colors.primary} />
+              )}
+              
+              {messages.map(message => (
+                <Message
+                  key={message.id}
+                  message={message}
+                  onCopyCode={handleCopyCode}
+                />
+              ))}
+              
+              {sending && (
+                <View style={styles.typingIndicator}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.typingText}>AI is typing...</Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <View style={styles.androidInputContainer}>
+              <TextInput
+                style={styles.input}
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder="Type your message..."
+                multiline
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!newMessage.trim() || sending) && styles.sendButtonDisabled
+                ]}
+                onPress={handleSend}
+                disabled={!newMessage.trim() || sending}
+              >
+                <Ionicons 
+                  name="send" 
+                  size={24} 
+                  color={!newMessage.trim() || sending ? colors.textSecondary : colors.primary} 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 };
@@ -600,7 +667,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 0,
+    paddingBottom: Platform.OS === 'android' ? 0 : 70, // Space for floating input on iOS only
   },
   loadingContainer: {
     flex: 1,
@@ -624,7 +693,7 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     flex: 1,
-    marginBottom: spacing.md,
+    marginBottom: 0,
   },
   chatContent: {
     // paddingVertical: spacing.md,
@@ -726,7 +795,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 5,
+    marginHorizontal: spacing.lg,
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: 0,
+    right: 0,
     ...shadows.medium,
   },
   input: {
@@ -736,7 +810,8 @@ const styles = StyleSheet.create({
     minHeight: 40,
     maxHeight: 100,
     paddingHorizontal: spacing.sm,
-    paddingVertical: Platform.OS === 'ios' ? spacing.xs : 0,
+    paddingTop: 0,
+    paddingBottom: 0,
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
   },
@@ -775,11 +850,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: Platform.OS === 'android' ? spacing.md : spacing.sm,
+    height: Platform.OS === 'android' ? 70 : 60,
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    ...shadows.small,
+    ...Platform.select({
+      ios: {
+        ...shadows.small,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   headerTitleContainer: {
     flex: 1,
@@ -788,12 +871,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.h2,
     color: colors.text,
-    fontSize: 20,
+    fontSize: 22,
   },
   headerSubtitle: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: 4,
+    fontSize: 13,
   },
   subspaceName: {
     ...typography.h1,
@@ -803,6 +887,20 @@ const styles = StyleSheet.create({
   timeSpent: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  androidInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    marginHorizontal: spacing.lg,
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: 0,
+    right: 0,
+    elevation: 4,
   },
 });
 
