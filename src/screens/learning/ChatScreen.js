@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: Platform.OS === 'android' ? spacing.md : spacing.sm,
-    height: Platform.OS === 'android' ? 70 : 60,
+    height: Platform.OS === 'android' ? 80 : 70,
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
