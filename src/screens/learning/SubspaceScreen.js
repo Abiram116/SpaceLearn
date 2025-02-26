@@ -815,24 +815,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: borderRadius.md,
   },
-  sendButton: {
-    padding: spacing.xs,
-    marginLeft: spacing.xs,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
-    ...shadows.small,
+  sendButton: {     
+    paddingVertical: spacing.sm,     
+    paddingHorizontal: spacing.md,     
+    marginLeft: spacing.xs,     
+    borderRadius: 0,     
+    alignContent: 'center',     
+    justifyContent: 'center',     
+    backgroundColor: colors.card,   
   },
+  
   sendButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.1,
+    // backgroundColor: colors.card,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.small,
+    // ...shadows.small,
   },
   backButtonText: {
     ...typography.caption,
