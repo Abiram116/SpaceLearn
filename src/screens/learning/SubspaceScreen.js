@@ -289,21 +289,61 @@ const SubspaceScreen = ({ route, navigation }) => {
                 user_id: user.id,
                 subject_id: subjectId,
                 subspace_id: subspaceId,
-                duration_minutes: 0,
-                start_time: new Date().toISOString(),
-                end_time: null,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                // Always start at 0 - we'll track the exact time
+                duration_minutes: 0
               }
             ])
             .select();
 
-          //           if (error) {
-          //             console.error('Error updating learning session:', error.message);
-          //           } else {
-          //             console.log('Successfully updated learning session:', data);
-          //           }
+          if (error) {
+            console.error('Error updating learning session:', error.message);
+          } else {
+            console.log('Successfully created learning session:', data);
+            // Make sure we have a valid session ID
+            if (data && data.length > 0 && data[0].id) {
+              global.currentLearningSessionId = data[0].id;
+              console.log('Set global learning session ID:', global.currentLearningSessionId);
+              
+              // Setup precise time tracking
+              global.sessionStartTime = new Date();  // Record exact start time
+              global.sessionElapsedSeconds = 0;      // Track elapsed seconds
+              
+              // Set up a timer to count seconds ONLY while in the subspace
+              // This ensures we only count time when the user is actively in the session
+              if (!global.sessionUpdateTimer) {
+                global.sessionUpdateTimer = setInterval(() => {
+                  // Increment elapsed time by 1 second
+                  global.sessionElapsedSeconds += 1;
+                  
+                  // Only update the database every 15 seconds to reduce load
+                  if (global.sessionElapsedSeconds % 15 === 0) {
+                    try {
+                      // Convert seconds to minutes, always rounding down
+                      const minutes = Math.floor(global.sessionElapsedSeconds / 60);
+                      
+                      // Update the database with the precise time
+                      supabase
+                        .from('learning_sessions')
+                        .update({ duration_minutes: minutes })
+                        .eq('id', global.currentLearningSessionId)
+                        .then(() => {
+                          console.log(`Session updated: ${minutes} minutes (${global.sessionElapsedSeconds} seconds)`);
+                        })
+                        .catch(error => {
+                          console.error('Error updating session time:', error);
+                        });
+                    } catch (error) {
+                      console.error('Error in session timer:', error);
+                    }
+                  }
+                }, 1000); // Update counter every 1 second for precise tracking
+                
+                console.log('Started precise second-by-second session timer');
+              }
+            } else {
+              console.error('Failed to get valid session ID from response:', data);
+            }
+          }
         } catch (updateError) {
           console.error('Error in learning session update:', updateError.message);
         }
@@ -414,92 +454,178 @@ const SubspaceScreen = ({ route, navigation }) => {
     Alert.alert('Success', 'Code copied to clipboard!');
   };
 
-  // const startLearningSession = async () => {
-  //   try {
-  //     const { data, error } = await supabase
-  //       .from('learning_sessions')
-  //       .insert({
-  //         user_id: user.id,
-  //         subject_id: subjectId,
-  //         subspace_id: subspaceId,
-  //         duration_minutes: 0,
-  //         start_time: new Date().toISOString(),
-  //         is_active: true,
-  //         created_at: new Date().toISOString(),
-  //         updated_at: new Date().toISOString()
-  //       })
-  //       .select()
-  //       .single();
+  // Track learning session time spent - using precise second tracking
+  const endLearningSession = async () => {
+    try {
+      if (!global.currentLearningSessionId) {
+        console.log('No active learning session found to end');
+        return;
+      }
 
-  //     if (error) throw error;
+      console.log(`Ending learning session: ${global.currentLearningSessionId} after ${global.sessionElapsedSeconds} seconds`);
+      const sessionId = global.currentLearningSessionId;
+      
+      // Use our precisely tracked elapsed seconds
+      const exactMinutes = Math.floor(global.sessionElapsedSeconds / 60);
+      console.log(`Using exact tracked time: ${exactMinutes} minutes (${global.sessionElapsedSeconds} seconds)`);
+      
+      // Add detailed time tracking log
+      
+      const { data: session, error: sessionError } = await supabase
+        .from('learning_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
 
-  //     console.log('Started learning session:', data);
-  //     return data;
-  //   } catch (error) {
-  //     console.error('Error starting learning session:', error);
-  //     throw error;
-  //   }
-  // };
+      if (sessionError) {
+        console.error('Error fetching session for ending:', sessionError);
+        return;
+      }
 
-  // const endLearningSession = async (sessionId) => {
-  //   try {
-  //     const now = new Date();
-  //     const { data: session, error: sessionError } = await supabase
-  //       .from('learning_sessions')
-  //       .select('*')
-  //       .eq('id', sessionId)
-  //       .single();
+      if (!session) {
+        console.error('Session not found for ID:', sessionId);
+        return;
+      }
 
-  //     if (sessionError || !session) {
-  //       throw new Error('Session not found or unauthorized');
-  //     }
+      // Use created_at as the start time since there's no start_time column
+      const startTime = new Date(session.created_at);
+      
+      // We'll use our precise second counter instead of calculating time difference
+      // This ensures we ONLY count time while the user was actually in the subspace
+      const durationMinutes = Math.floor(global.sessionElapsedSeconds / 60);
+      
+      // Log the details for debugging
+      console.log(`Using elapsed seconds from counter: ${global.sessionElapsedSeconds}`);
+      console.log(`Converting to ${durationMinutes} minutes`);
+      
+      // Add detailed logging to track time calculations
+      console.log('Time calculation details:', {
+        startTimeISO: session.created_at,
+        nowTimeISO: now.toISOString(),
+        exactSeconds: global.sessionElapsedSeconds,
+        finalMinutes: durationMinutes,
+        // Show minutes and seconds for logging
+        minutesSeconds: `${Math.floor(global.sessionElapsedSeconds / 60)}m ${global.sessionElapsedSeconds % 60}s`
+      });
+      
+      console.log('Learning session details:', {
+        sessionId: sessionId,
+        actualSeconds: global.sessionElapsedSeconds,
+        calculatedMinutes: durationMinutes
+      });
 
-  //     const startTime = new Date(session.start_time);
-  //     const durationMinutes = Math.max(0.5, (now - startTime) / (1000 * 60)); // Minimum 30 seconds
+      // Update the session with the calculated duration
+      // Note: The schema shows learning_sessions does NOT have an updated_at column
+      const { data: updatedSession, error: updateError } = await supabase
+        .from('learning_sessions')
+        .update({
+          duration_minutes: Number(durationMinutes) // Ensure it's stored as a number
+        })
+        .eq('id', sessionId)
+        .select();
 
-  //     const { data: updatedSession, error: updateError } = await supabase
-  //       .from('learning_sessions')
-  //       .update({
-  //         duration_minutes: durationMinutes,
-  //         updated_at: now.toISOString(),
-  //         is_active: false,
-  //         end_time: now.toISOString()
-  //       })
-  //       .eq('id', sessionId)
-  //       .select()
-  //       .single();
+      if (updateError) {
+        console.error('Error updating session duration:', updateError);
+        return;
+      }
+      
+      if (!updatedSession || updatedSession.length === 0) {
+        console.error('No session was updated');
+        return;
+      }
 
-  //     if (updateError) throw updateError;
+      console.log('Successfully ended learning session:', {
+        id: updatedSession[0]?.id,
+        duration: updatedSession[0]?.duration_minutes,
+        startTime: updatedSession[0]?.created_at,
+        endTime: now.toISOString() // Log but don't store in DB
+      });
 
-  //     console.log('Updated session duration:', {
-  //       id: updatedSession.id,
-  //       duration: updatedSession.duration_minutes,
-  //       startTime: updatedSession.start_time,
-  //       endTime: updatedSession.end_time
-  //     });
+      // Store the ID for verification before clearing
+      const completedSessionId = global.currentLearningSessionId;
+      
+      // Clear the global session ID
+      global.currentLearningSessionId = null;
+      
+      // Return the ID so we can verify it later
+      return completedSessionId;
+    } catch (error) {
+      console.error('Error in endLearningSession:', error);
+    }
+  };
 
-  //     return updatedSession;
-  //   } catch (error) {
-  //     console.error('Error in endLearningSession:', error);
-  //     throw error;
-  //   }
-  // };
+  // Function to verify the session was recorded properly
+  const verifySessionRecorded = async (sessionId) => {
+    try {
+      if (!sessionId) return;
+      
+      // Give the database a moment to update
+      setTimeout(async () => {
+        console.log('Verifying session was recorded properly:', sessionId);
+        const { data, error } = await supabase
+          .from('learning_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+        
+        if (error) {
+          console.error('Error verifying session:', error);
+          return;
+        }
+        
+        console.log('Session verification result:', {
+          id: data.id,
+          duration: data.duration_minutes,
 
-  // useEffect(() => {
-  //   let sessionId;
-  //   const startSession = async () => {
-  //     const session = await startLearningSession();
-  //     sessionId = session.id;
-  //   };
+          startTime: data.created_at
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Error in session verification:', error);
+    }
+  };
 
-  //   startSession();
-
-  //   return () => {
-  //     if (sessionId) {
-  //       endLearningSession(sessionId);
-  //     }
-  //   };
-  // }, [subjectId, subspaceId]);
+  // End the learning session when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up the auto-update timer if it exists
+      if (global.sessionUpdateTimer) {
+        clearInterval(global.sessionUpdateTimer);
+        global.sessionUpdateTimer = null;
+        console.log('Cleared session auto-update timer');
+      }
+      
+      // Only end the session if we successfully created one
+      // Use the exact seconds we've been tracking
+      if (global.currentLearningSessionId) {
+        console.log(`Component unmounting, ending learning session after ${global.sessionElapsedSeconds} seconds`);
+        
+        // Convert seconds to minutes directly, using only exact time spent
+        const finalMinutes = Math.floor(global.sessionElapsedSeconds / 60);
+        
+        // Update session with final time instead of recalculating
+        supabase
+          .from('learning_sessions')
+          .update({ duration_minutes: finalMinutes })
+          .eq('id', global.currentLearningSessionId)
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Error updating final session time:', error);
+            } else {
+              console.log(`Final session time recorded: ${finalMinutes} minutes`);
+              // Reset global timer variables
+              global.sessionElapsedSeconds = 0;
+              global.sessionStartTime = null;
+              // Verify session was properly recorded
+              verifySessionRecorded(global.currentLearningSessionId);
+            }
+          })
+          .catch(error => {
+            console.error('Error in cleanup function:', error);
+          });
+      }
+    };
+  }, []);
 
   if (loading) {
     return (

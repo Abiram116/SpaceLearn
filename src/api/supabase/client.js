@@ -158,8 +158,35 @@ export { supabase };
 export const handleResponse = (response) => {
   if (response.error) {
     console.error('Supabase response error:', response.error);
+    
+    // Check for specific database errors that might affect features
+    if (response.error.code === 'PGRST301' || 
+        response.error.code === '42P01' || 
+        response.error.code === '42703') {
+      console.error('Database schema error detected. This may affect features like continue learning.');
+    }
+    
+    if (response.error.code === '23505') {
+      console.error('Unique constraint violation. This may affect user-specific features.');
+    }
+    
+    if (response.error.code === '23503') {
+      console.error('Foreign key constraint violation. This may affect relationships between data.');
+    }
+    
+    if (response.error.code?.startsWith('P0')) {
+      console.error('Database connection error. This may cause inconsistent behavior between users.');
+    }
+    
     throw new Error(response.error.message || 'An unexpected error occurred');
   }
+  
+  // Ensure data exists and is in expected format
+  if (!response.data && response.data !== null) {
+    console.warn('Supabase returned undefined data');
+    return null;
+  }
+  
   return response.data;
 };
 

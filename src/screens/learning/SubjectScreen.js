@@ -1,13 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 
-const subjects = [
-  { id: '1', name: 'Physics', topics: 12, progress: 75 },
-  { id: '2', name: 'Chemistry', topics: 15, progress: 60 },
-  { id: '3', name: 'Biology', topics: 10, progress: 90 },
-  { id: '4', name: 'Mathematics', topics: 20, progress: 45 },
-];
-
 const SubjectCard = ({ name, topics, progress, onPress }) => (
   <TouchableOpacity style={styles.card} onPress={onPress}>
     <Text style={styles.subjectName}>{name}</Text>

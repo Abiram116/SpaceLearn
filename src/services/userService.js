@@ -388,42 +388,38 @@ export const userService = {
   // Get user streak
   getUserStreak: async (userId) => {
     try {
-      console.log('Getting user streak for ID:', userId);
-      
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('streak_count, last_activity_date')
-        .eq('id', userId)
-        .maybeSingle();
+      // Try to get from user_streaks table first
+      const { data, error } = await supabase
+        .from('user_streaks')
+        .select('*')
+        .eq('user_id', userId);
 
-      if (checkError) {
-        console.error('Error checking user streak:', checkError);
-        throw checkError;
+      // If the table doesn't exist or there's another error, fall back to the users table
+      if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+        console.log('Falling back to users table for streak data');
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('streak_count, last_activity_date')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (userError) {
+          console.error('Error in streak fallback:', userError);
+          return { streak_count: 0, last_activity_date: null };
+        }
+
+        return userData || { streak_count: 0, last_activity_date: null };
       }
 
-      // If no user found, return default values
-      if (!existingUser) {
-        console.log('No user profile found for streak, returning defaults');
+      if (error) {
+        console.error('Error fetching user streak:', error);
         return { streak_count: 0, last_activity_date: null };
       }
 
-      const { streak_count, last_activity_date } = existingUser;
-      
-      console.log('Current streak data:', { streak_count, last_activity_date });
-      
-      // Update streak if needed
-      try {
-        const updatedStreak = await userService.updateStreak(userId, streak_count, last_activity_date);
-        console.log('Updated streak:', updatedStreak);
-        return updatedStreak;
-      } catch (updateError) {
-        console.error('Error updating streak:', updateError);
-        // If update fails, return the existing streak data
-        return { streak_count, last_activity_date };
-      }
+      return data && data.length > 0 ? data[0] : { streak_count: 0, last_activity_date: null };
     } catch (error) {
       console.error('Error in getUserStreak:', error);
-      // Return default values on error
+      // Return default values instead of throwing
       return { streak_count: 0, last_activity_date: null };
     }
   },

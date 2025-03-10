@@ -19,12 +19,13 @@ export const subjectService = {
 
       console.log('Fetching subjects for user:', user.id);
 
-      // Get subjects with their total time spent
+      // Get subjects with their sessions (only including columns that exist in DB)
       const { data, error } = await supabase
         .from('subjects')
         .select(`
           *,
-          learning_sessions(duration_minutes)
+          subspaces(id, name, description),
+          learning_sessions(id, duration_minutes, subspace_id, created_at)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -50,12 +51,52 @@ export const subjectService = {
 
       // Calculate total time for each subject
       const subjectsWithTime = data.map(subject => {
-        const totalTime = subject.learning_sessions?.reduce(
-          (sum, session) => sum + (session.duration_minutes || 0), 
-          0
-        ) || 0;
+        // Ensure we handle missing or null learning_sessions gracefully
+        if (!subject.learning_sessions || !Array.isArray(subject.learning_sessions)) {
+          console.warn(`No learning sessions data for subject: ${subject.name}`);
+          return {
+            ...subject,
+            total_time_spent: 0
+          };
+        }
 
-        console.log(`Subject: ${subject.name}, Total Time: ${totalTime}`);
+        // Calculate total time, ensuring we use numerical values
+        const totalTime = subject.learning_sessions.reduce(
+          (sum, session) => {
+            // Default to at least 0 if duration is null/undefined
+            // For brand new sessions, ensure we count at least some time
+            let mins = 0;
+            
+            if (session.duration_minutes === 0) {
+              // For new sessions with 0 duration, check how old they are
+              if (session.created_at) {
+                const createdAt = new Date(session.created_at);
+                const now = new Date();
+                const ageInMinutes = (now - createdAt) / (1000 * 60);
+                
+                // If the session is newer than 5 minutes, count at least some time
+                if (ageInMinutes < 5) {
+                  mins = 1; // Count at least 1 minute for very new sessions
+                }
+              }
+            } else {
+              // Normal case - use the stored duration
+              mins = typeof session.duration_minutes === 'number' ? 
+                session.duration_minutes : 
+                parseInt(session.duration_minutes || 0);
+            }
+            
+            return sum + mins;
+          }, 
+          0
+        );
+
+        console.log(`Subject: ${subject.name}, Total Time: ${totalTime} mins, Sessions: ${subject.learning_sessions.length}`);
+        
+        // Log detailed session data for debugging
+        subject.learning_sessions.forEach((session, idx) => {
+          console.log(`  Session ${idx+1}: ${session.duration_minutes} mins`);
+        });
 
         return {
           ...subject,
@@ -69,7 +110,8 @@ export const subjectService = {
         subjects: subjectsWithTime.map(s => ({ 
           id: s.id, 
           name: s.name,
-          timeSpent: s.total_time_spent 
+          timeSpent: s.total_time_spent,
+          hasTime: s.total_time_spent > 0 ? 'YES' : 'NO' // For easier debugging
         }))
       });
 
@@ -152,12 +194,14 @@ export const subjectService = {
   // Get all subspaces for a subject
   getSubspaces: async (subjectId) => {
     try {
-      // Get subspaces with their total time spent
+      console.log('Getting subspaces for subject:', subjectId);
+      
+      // Get subspaces with learning sessions data - only include columns that exist
       const { data, error } = await supabase
         .from('subspaces')
         .select(`
           *,
-          learning_sessions(duration_minutes)
+          learning_sessions(id, duration_minutes, created_at)
         `)
         .eq('subject_id', subjectId)
         .order('created_at', { ascending: false });
@@ -172,8 +216,24 @@ export const subjectService = {
 
       // Calculate total time for each subspace
       const subspacesWithTime = data.map(subspace => {
+        // Calculate total time, ensuring we handle new sessions properly
         const totalTime = subspace.learning_sessions?.reduce(
-          (sum, session) => sum + (session.duration_minutes || 0),
+          (sum, session) => {
+            // Get duration from the session
+            let duration = session.duration_minutes || 0;
+            
+            // If duration is 0 but session is very new (created within last 5 minutes)
+            // show a small time value so it appears in the UI
+            if (duration === 0 && session.created_at) {
+              const sessionAge = (new Date() - new Date(session.created_at)) / (1000 * 60);
+              if (sessionAge < 5) {
+                console.log(`New session detected for subspace ${subspace.name}, age: ${sessionAge.toFixed(1)} minutes`);
+                return sum + 1; // Show a minimal time for very new sessions
+              }
+            }
+            
+            return sum + duration;
+          },
           0
         ) || 0;
 
@@ -206,14 +266,27 @@ export const subjectService = {
   createSubspace: async (subjectId, name, description = '') => {
     try {
       // Get the subject's sequence_id and the count of existing subspaces
-      const { data: subject, error: subjectError } = await supabase
+      // Important: Handle case where subject might not be found
+      const { data: subjects, error: subjectError } = await supabase
         .from('subjects')
         .select('sequence_id')
-        .eq('id', subjectId)
-        .single();
+        .eq('id', subjectId);
 
-      if (subjectError) throw subjectError;
-
+      if (subjectError) {
+        console.error('Error fetching subject for sequence ID:', subjectError);
+        throw subjectError;
+      }
+      
+      // Check if we got any results
+      if (!subjects || subjects.length === 0) {
+        console.error('Subject not found for ID:', subjectId);
+        throw new Error(`Subject with ID ${subjectId} not found`);
+      }
+      
+      // Now we safely have the subject
+      const subject = subjects[0];
+      
+      // Get next sequence number for subspace
       const { data: subspaces, error: countError } = await supabase
         .from('subspaces')
         .select('sequence_id')
@@ -221,9 +294,21 @@ export const subjectService = {
         .order('sequence_id', { ascending: false })
         .limit(1);
 
+      if (countError) {
+        console.error('Error checking existing subspaces:', countError);
+      }
+
       const nextSubspaceSequence = subspaces && subspaces.length > 0 ? subspaces[0].sequence_id + 1 : 1;
       const fullSequenceId = `${subject.sequence_id}.${nextSubspaceSequence}`;
+      
+      console.log('Creating subspace with sequence:', {
+        subjectId,
+        subjectSequence: subject.sequence_id,
+        nextSubspaceSequence,
+        fullSequenceId
+      });
 
+      // Insert the new subspace, using our array result handling to avoid .single() issues
       const response = await supabase
         .from('subspaces')
         .insert([{ 
@@ -233,10 +318,11 @@ export const subjectService = {
           sequence_id: nextSubspaceSequence,
           full_sequence_id: fullSequenceId
         }])
-        .select()
-        .single();
+        .select();
       
-      return handleResponse(response);
+      // Handle response carefully to avoid 'no rows' errors
+      const result = handleResponse(response);
+      return Array.isArray(result) && result.length > 0 ? result[0] : result;
     } catch (error) {
       console.error('Error in createSubspace:', error);
       throw error;
@@ -313,62 +399,102 @@ export const subjectService = {
     try {
       console.log('=== Starting getLastAccessedSubspace ===');
       
+      // Get the current user and verify they're authenticated
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
+      if (authError) {
+        console.error('Authentication error in getLastAccessedSubspace:', authError);
+        return null;
+      }
+      
+      if (!user || !user.id) {
+        console.error('No authenticated user found in getLastAccessedSubspace');
         return null;
       }
 
+      console.log('Getting last accessed subspace for user:', user.id);
+
       // First try to get the last accessed sequence from user preferences
-      const { data: preferences, error: prefError } = await supabase
+      // Use limit(1) and order by created_at instead of single() to prevent multiple rows error
+      const { data: preferencesArray, error: prefError } = await supabase
         .from('user_preferences')
         .select('last_accessed_sequence')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (!prefError && preferences?.last_accessed_sequence) {
+      // Get the first preference if available
+      const preferences = preferencesArray && preferencesArray.length > 0 ? preferencesArray[0] : null;
+
+      if (prefError) {
+        console.error('Error fetching user preferences:', prefError);
+        // Continue to fallback - don't return yet
+      } else if (preferences?.last_accessed_sequence) {
         console.log('Found last accessed sequence:', preferences.last_accessed_sequence);
         
         // Parse the sequence ID to get subject and subspace sequence
-        const [subjectSeq, subspaceSeq] = preferences.last_accessed_sequence.split('.');
+        const parts = preferences.last_accessed_sequence.split('.');
         
-        // Get the subject and subspace based on sequence IDs
-        const { data: subjects, error: subjectError } = await supabase
-          .from('subjects')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('sequence_id', parseInt(subjectSeq))
-          .single();
+        if (parts.length === 2) {
+          const [subjectSeq, subspaceSeq] = parts;
+          const subjectSequenceId = parseInt(subjectSeq);
+          const subspaceSequenceId = parseInt(subspaceSeq);
+          
+          if (!isNaN(subjectSequenceId) && !isNaN(subspaceSequenceId)) {
+            // Get the subject based on sequence ID
+            const { data: subject, error: subjectError } = await supabase
+              .from('subjects')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('sequence_id', subjectSequenceId)
+              .single();
 
-        if (!subjectError && subjects) {
-          const { data: subspaces, error: subspaceError } = await supabase
-            .from('subspaces')
-            .select(`
-              *,
-              learning_sessions(duration_minutes)
-            `)
-            .eq('subject_id', subjects.id)
-            .eq('sequence_id', parseInt(subspaceSeq))
-            .single();
+            if (subjectError) {
+              console.error('Error fetching subject by sequence ID:', subjectError);
+              // Continue to fallback
+            } else if (subject && subject.id) {
+              // Get the subspace based on sequence ID
+              const { data: subspace, error: subspaceError } = await supabase
+                .from('subspaces')
+                .select(`
+                  *,
+                  learning_sessions(duration_minutes)
+                `)
+                .eq('subject_id', subject.id)
+                .eq('sequence_id', subspaceSequenceId)
+                .single();
 
-          if (!subspaceError && subspaces) {
-            const totalTimeSpent = subspaces.learning_sessions?.reduce(
-              (sum, session) => sum + (session.duration_minutes || 0),
-              0
-            ) || 0;
+              if (subspaceError) {
+                console.error('Error fetching subspace by sequence ID:', subspaceError);
+                // Continue with fallback
+              } else if (subspace && subspace.id) {
+                console.log('Successfully found last accessed subspace by sequence:', subspace.name);
+                
+                // Calculate total time spent
+                const totalTimeSpent = subspace.learning_sessions?.reduce(
+                  (sum, session) => sum + (session.duration_minutes || 0),
+                  0
+                ) || 0;
 
-            return {
-              id: subspaces.id,
-              name: subspaces.name,
-              description: subspaces.description,
-              subject: subjects,
-              subject_id: subjects.id,
-              total_time_spent: totalTimeSpent
-            };
+                return {
+                  id: subspace.id,
+                  name: subspace.name,
+                  description: subspace.description || '',
+                  subject: subject,
+                  subject_id: subject.id,
+                  total_time_spent: totalTimeSpent
+                };
+              }
+            }
+          } else {
+            console.error('Invalid sequence format:', preferences.last_accessed_sequence);
           }
+        } else {
+          console.error('Invalid last_accessed_sequence format:', preferences.last_accessed_sequence);
         }
       }
 
+      console.log('Falling back to most recent subject for user:', user.id);
+      
       // If no last accessed sequence or it's invalid, fall back to most recent subject
       const { data: recentSubjects, error: subjectsError } = await supabase
         .from('subjects')
@@ -378,17 +504,17 @@ export const subjectService = {
         .limit(1);
 
       if (subjectsError) {
-        console.error('Error fetching subjects:', subjectsError);
+        console.error('Error fetching recent subjects:', subjectsError);
         return null;
       }
 
       if (!recentSubjects || recentSubjects.length === 0) {
-        console.log('No subjects found');
+        console.log('No subjects found for user:', user.id);
         return null;
       }
 
       const subject = recentSubjects[0];
-      console.log('Falling back to most recent subject:', subject.name);
+      console.log('Found most recent subject:', subject.name);
 
       // Try to get any subspaces for this subject
       const { data: subspaces, error: subspacesError } = await supabase
@@ -402,26 +528,38 @@ export const subjectService = {
         .limit(1);
 
       if (subspacesError) {
-        console.error('Error fetching subspaces:', subspacesError);
-        return { subject, total_time_spent: 0 };
+        console.error('Error fetching subspaces for subject:', subspacesError);
+        // Return just the subject if we can't get subspaces
+        return { 
+          subject: subject,
+          subject_id: subject.id,
+          total_time_spent: 0 
+        };
       }
 
       if (!subspaces || subspaces.length === 0) {
         console.log('No subspaces found for subject:', subject.name);
-        return { subject, total_time_spent: 0 };
+        return { 
+          subject: subject,
+          subject_id: subject.id,
+          total_time_spent: 0 
+        };
       }
 
       const subspace = subspaces[0];
+      console.log('Found most recent subspace:', subspace.name);
+      
+      // Calculate total time spent
       const totalTimeSpent = subspace.learning_sessions?.reduce(
-        (sum, session) => sum + (session.duration_minutes || 0),
+        (sum, session) => sum + (Number(session.duration_minutes) || 0),
         0
       ) || 0;
 
       return {
         id: subspace.id,
         name: subspace.name,
-        description: subspace.description,
-        subject,
+        description: subspace.description || '',
+        subject: subject,
         subject_id: subject.id,
         total_time_spent: totalTimeSpent
       };
@@ -567,6 +705,7 @@ export const subjectService = {
       const now = new Date().toISOString();
 
       // Create a new learning session with 0 duration initially
+      // Only include columns that actually exist in your schema
       const { data: session, error: sessionError } = await supabase
         .from('learning_sessions')
         .insert({
@@ -574,10 +713,8 @@ export const subjectService = {
           subject_id: subspace.subject_id,
           subspace_id: subspaceId,
           duration_minutes: 0,
-          created_at: now,
-          updated_at: now,
-          start_time: now,
-          is_active: true
+          created_at: now
+          // removed columns that don't exist: updated_at, start_time, is_active
         })
         .select()
         .single();
@@ -638,13 +775,12 @@ export const subjectService = {
       });
 
       // Update the session with the actual duration
+      // Only include columns that exist in your schema
       const { data: updatedSession, error: updateError } = await supabase
         .from('learning_sessions')
         .update({
-          duration_minutes: durationMinutes,
-          updated_at: now.toISOString(),
-          is_active: false,
-          end_time: now.toISOString()
+          duration_minutes: durationMinutes
+          // removed columns that don't exist: updated_at, is_active, end_time
         })
         .eq('id', sessionId)
         .eq('user_id', user.id)
@@ -667,28 +803,70 @@ export const subjectService = {
     }
   },
 
-  // Get active learning session if exists
+  // Get subspace by sequence ID
+  getSubspaceBySequenceId: async (sequenceId) => {
+    try {
+      console.log('Getting subspace by sequence ID:', sequenceId);
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('Auth error:', authError);
+        throw new Error('Authentication failed');
+      }
+      
+      // Get the subspace without using single() to avoid errors
+      const { data, error } = await supabase
+        .from('subspaces')
+        .select('*')
+        .eq('full_sequence_id', sequenceId);
+
+      if (error) {
+        console.error('Error fetching subspace by sequence ID:', error);
+        throw error;
+      }
+      
+      // Handle case where no subspaces are found
+      if (!data || data.length === 0) {
+        console.log('No subspace found with sequence ID:', sequenceId);
+        return null;
+      }
+      
+      // Return the first match
+      return data[0];
+    } catch (error) {
+      console.error('Error in getSubspaceBySequenceId:', error);
+      // Return null instead of throwing to avoid crashes
+      return null;
+    }
+  },
+  
+  // Get most recent learning session for a subspace
   getActiveSession: async (subspaceId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
-      const { data: session, error } = await supabase
+      // Get the most recently created session instead of using is_active flag
+      // which doesn't exist in the schema
+      const { data, error } = await supabase
         .from('learning_sessions')
         .select('*')
         .eq('subspace_id', subspaceId)
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error) {
-        if (error.code === 'PGRST116') { // No rows returned
-          return null;
-        }
         throw error;
       }
-
-      return session;
+      
+      // Return null if no sessions found
+      if (!data || data.length === 0) {
+        return null;
+      }
+      
+      // Return the most recent session
+      return data[0];
     } catch (error) {
       console.error('Error in getActiveSession:', error);
       throw error;
