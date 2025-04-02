@@ -6,6 +6,7 @@ import SubjectsScreen from '../screens/learning/SubjectsScreen';
 import NotesScreen from '../screens/learning/NotesScreen';
 import AssignmentsScreen from '../screens/assignments/AssignmentsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import ChatScreen from '../screens/main/ChatScreen';
 import { colors, typography } from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
@@ -23,6 +24,8 @@ const MainNavigator = () => {
             iconName = focused ? 'library' : 'library-outline';
           } else if (route.name === 'Notes') {
             iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Chat') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           } else if (route.name === 'Assignments') {
             iconName = focused ? 'calendar' : 'calendar-outline';
           } else if (route.name === 'Profile') {
@@ -62,6 +65,13 @@ const MainNavigator = () => {
         component={NotesScreen}
         options={{
           title: 'Notes',
+        }}
+      />
+      <Tab.Screen 
+        name="Chat" 
+        component={ChatScreen}
+        options={{
+          title: 'AI Chat',
         }}
       />
       <Tab.Screen 

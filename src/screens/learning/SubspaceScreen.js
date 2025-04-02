@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
 import { subjectService } from '../../services/subjectService';
 import { supabase } from '../../api/supabase/client';
-import { generateResponse } from '../../api/deepseek/client';
+import { chatService } from '../../services/chatService';
 import { useAuth } from '../../hooks/useAuth';
 
 const CodeBlock = ({ content, language }) => {
@@ -421,8 +421,8 @@ const SubspaceScreen = ({ route, navigation }) => {
       // Get context from subspace
       const context = `This is a learning session about ${subspace.name}. ${subspace.description || ''}`;
 
-      // Call DeepSeek API
-      const aiResponse = await generateResponse(userMessage.content, context);
+      // Call Google AI API through chat service
+      const aiResponse = await chatService.generateResponse(userMessage.content, context);
       
       // Save AI response
       const { data: savedAiMessage, error: aiSaveError } = await supabase

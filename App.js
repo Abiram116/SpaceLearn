@@ -6,6 +6,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
 import { linking } from './src/navigation/linking';
 import { Platform, View, Text } from 'react-native';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 export default function App() {
   const [error, setError] = useState(null);
@@ -50,29 +51,31 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer 
-          linking={Platform.OS === 'web' ? linking : undefined}
-          fallback={<View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />}
-          onStateChange={(state) => {
-            if (Platform.OS === 'web') {
-              console.log('Navigation state changed:', state);
-            }
-          }}
-          documentTitle={{
-            formatter: (options, route) => {
-              if (route?.name) {
-                return `${route.name} - Space Learn`;
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <NavigationContainer 
+            linking={Platform.OS === 'web' ? linking : undefined}
+            fallback={<View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />}
+            onStateChange={(state) => {
+              if (Platform.OS === 'web') {
+                console.log('Navigation state changed:', state);
               }
-              return 'Space Learn';
-            },
-          }}
-        >
-          <StatusBar style="auto" />
-          <AppNavigator />
-        </NavigationContainer>
-      </AuthProvider>
-    </SafeAreaProvider>
+            }}
+            documentTitle={{
+              formatter: (options, route) => {
+                if (route?.name) {
+                  return `${route.name} - Space Learn`;
+                }
+                return 'Space Learn';
+              },
+            }}
+          >
+            <StatusBar style="auto" />
+            <AppNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 } 

@@ -54,7 +54,7 @@ SpaceLearn is an educational platform designed to help students learn through in
 
 - React Native / Expo
 - Supabase for backend and authentication
-- DeepSeek AI for intelligent responses
+- Google AI (Gemini Pro) for intelligent responses
 - Custom syntax highlighting
 - Real-time data synchronization
 
@@ -74,10 +74,12 @@ npm install
 3. Set up environment variables
 Create a .env file with the following:
 ```
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-EXPO_PUBLIC_DEEPSEEK_API_URL=your_deepseek_api_url
-EXPO_PUBLIC_DEEPSEEK_API_KEY=your_deepseek_api_key
+EXPO_PUBLIC_ANDROID_CLIENT_ID=your_android_client_id
+EXPO_PUBLIC_IOS_CLIENT_ID=your_ios_client_id
+EXPO_PUBLIC_EXPO_CLIENT_ID=your_expo_client_id
+EXPO_PUBLIC_GOOGLE_AI_API_KEY=your_google_ai_api_key
 ```
 
 4. Run the development server

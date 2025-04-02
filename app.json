@@ -23,6 +23,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "EXPO_PUBLIC_GOOGLE_AI_API_KEY": "process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY"
     }
   }
 }

@@ -1,12 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Markdown from 'react-native-markdown-display';
 
 const ChatBubble = ({ message, isUser }) => {
   return (
     <View style={[styles.bubble, isUser ? styles.userBubble : styles.botBubble]}>
-      <Text style={[styles.text, isUser ? styles.userText : styles.botText]}>
-        {message}
-      </Text>
+      {isUser ? (
+        // User messages stay as plain text
+        <Text style={[styles.text, styles.userText]}>
+          {message}
+        </Text>
+      ) : (
+        // AI messages get rendered as markdown
+        <Markdown
+          style={markdownStyles}
+        >
+          {message}
+        </Markdown>
+      )}
     </View>
   );
 };
@@ -39,4 +50,54 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatBubble; 
+// Markdown-specific styles
+const markdownStyles = {
+  body: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  strong: {
+    fontWeight: 'bold',
+  },
+  code_block: {
+    backgroundColor: '#F0F0F0',
+    padding: 10,
+    borderRadius: 5,
+    fontFamily: 'monospace',
+  },
+  code_inline: {
+    backgroundColor: '#F0F0F0',
+    fontFamily: 'monospace',
+    padding: 2,
+  },
+  paragraph: {
+    marginVertical: 5,
+  },
+  list_item: {
+    marginLeft: 10,
+  },
+  heading1: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+  heading2: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginVertical: 8,
+  },
+  heading3: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginVertical: 6,
+  },
+  blockquote: {
+    backgroundColor: '#F0F0F0',
+    padding: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#CCCCCC',
+    marginVertical: 5,
+  },
+};
+
+export default ChatBubble;

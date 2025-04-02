@@ -23,7 +23,8 @@ import NotesScreen from '../screens/learning/NotesScreen';
 import ChatScreen from '../screens/learning/ChatScreen';
 
 // Assignment Screens
-import AssignmentsScreen from '../screens/assignments/AssignmentsScreen';
+import AssignmentsScreen from '../screens/AssignmentsScreen';
+import AssignmentQuizScreen from '../screens/AssignmentQuizScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -92,6 +93,7 @@ const MainAppStack = () => {
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <Stack.Screen name="AssignmentQuiz" component={AssignmentQuizScreen} />
     </Stack.Navigator>
   );
 };
@@ -114,6 +116,8 @@ const AppNavigator = () => {
       <Stack.Screen name="Auth" component={AuthScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="MainApp" component={MainAppStack} />
+      <Stack.Screen name="Assignments" component={AssignmentsScreen} />
+      <Stack.Screen name="AssignmentQuiz" component={AssignmentQuizScreen} />
     </Stack.Navigator>
   );
 };

@@ -14,21 +14,43 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
 import { userService } from '../../services/userService';
+import { supabase } from '../../api/supabase/client';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import AnimatedView from '../../components/common/AnimatedView';
+import { useTheme } from '../../context/ThemeContext';
 
 const ProfileScreen = ({ navigation }) => {
+  const { theme } = useTheme();
   const [user, setUser] = useState(null);
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [assignmentPoints, setAssignmentPoints] = useState(0);
 
   useEffect(() => {
     loadUserProfile();
   }, []);
 
+  const getUserAssignmentPoints = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('assignment_results')
+        .select('score')
+        .eq('user_id', userId);
+        
+      if (error) throw error;
+      
+      const totalPoints = data.reduce((sum, result) => sum + result.score, 0);
+      return totalPoints;
+    } catch (error) {
+      console.error('Error fetching assignment points:', error);
+      return 0;
+    }
+  };
+
   const loadUserProfile = async () => {
     try {
+      setLoading(true);
       const userData = await userService.getCurrentUser();
       if (userData) {
         setUser(userData);
@@ -36,6 +58,10 @@ const ProfileScreen = ({ navigation }) => {
           notification_enabled: true,
           ...userData.user_preferences?.[0]
         });
+        
+        // Get assignment points
+        const points = await getUserAssignmentPoints(userData.id);
+        setAssignmentPoints(points);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -136,30 +162,33 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} showsVerticalScrollIndicator={false}>
       <AnimatedView animation="fade">
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
           <View style={styles.avatarContainer}>
-            {user.avatar_url ? (
+            {user?.avatar_url ? (
               <Image
                 source={{ uri: user.avatar_url }}
-                style={styles.avatar}
+                style={[styles.avatar, { borderColor: theme.colors.background }]}
               />
             ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Ionicons name="person" size={40} color={colors.textSecondary} />
+              <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.background }]}>
+                <Ionicons name="person" size={40} color={theme.colors.textSecondary} />
               </View>
             )}
             <TouchableOpacity
-              style={styles.editAvatarButton}
+              style={[styles.editAvatarButton, { 
+                backgroundColor: theme.colors.primary,
+                borderColor: theme.colors.background 
+              }]}
               onPress={handleEditProfile}
             >
-              <Ionicons name="camera" size={20} color={colors.background} />
+              <Ionicons name="camera" size={20} color={theme.colors.background} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>{user.full_name}</Text>
-          <Text style={styles.username}>@{user.username}</Text>
-          {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
+          <Text style={[styles.name, { color: theme.colors.background }]}>{user?.full_name}</Text>
+          <Text style={[styles.username, { color: theme.colors.background }]}>@{user?.username}</Text>
+          {user?.bio && <Text style={[styles.bio, { color: theme.colors.background }]}>{user.bio}</Text>}
         </View>
       </AnimatedView>
 
@@ -167,45 +196,33 @@ const ProfileScreen = ({ navigation }) => {
         <AnimatedView animation="slide" delay={200}>
           <Card style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="person" size={24} color={colors.primary} />
+              <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <Ionicons name="trophy" size={24} color={theme.colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Gender</Text>
-                <Text style={styles.infoValue}>
-                  {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'Not specified'}
-                </Text>
+                <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Assignment Points</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]}>{assignmentPoints}</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="calendar" size={24} color={colors.primary} />
+              <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <Ionicons name="flame" size={24} color={theme.colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Age</Text>
-                <Text style={styles.infoValue}>{user.age || 'Not specified'}</Text>
+                <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Learning Streak</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]}>{user?.streak_count || 0} days</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="flame" size={24} color={colors.primary} />
+              <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <Ionicons name="calendar" size={24} color={theme.colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Learning Streak</Text>
-                <Text style={styles.infoValue}>{user.streak_count} days</Text>
-              </View>
-            </View>
-
-            <View style={[styles.infoRow, { marginBottom: 0 }]}>
-              <View style={styles.infoIconContainer}>
-                <Ionicons name="time" size={24} color={colors.primary} />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Member Since</Text>
-                <Text style={styles.infoValue}>
-                  {new Date(user.created_at).toLocaleDateString()}
+                <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Member Since</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]}>
+                  {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}
                 </Text>
               </View>
             </View>
