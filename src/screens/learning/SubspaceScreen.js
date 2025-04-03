@@ -22,6 +22,7 @@ import { subjectService } from '../../services/subjectService';
 import { supabase } from '../../api/supabase/client';
 import { chatService } from '../../services/chatService';
 import { useAuth } from '../../hooks/useAuth';
+import Markdown from 'react-native-markdown-display';
 
 const CodeBlock = ({ content, language }) => {
   // Basic syntax highlighting using regex
@@ -227,12 +228,12 @@ const Message = ({ message, onCopyCode }) => {
             );
           }
           return (
-            <Text key={index} style={[
-              styles.messageText,
-              message.is_ai ? styles.aiMessageText : styles.userMessageText
-            ]}>
+            <Markdown
+              key={index}
+              style={message.is_ai ? markdownStylesAI : markdownStylesUser}
+            >
               {part.content}
-            </Text>
+            </Markdown>
           );
         })}
       </View>
@@ -784,6 +785,164 @@ const SubspaceScreen = ({ route, navigation }) => {
       )}
     </SafeAreaView>
   );
+};
+
+const markdownStylesAI = {
+  body: {
+    color: '#000000',
+    fontSize: 16,
+  },
+  paragraph: {
+    marginVertical: 8,
+  },
+  strong: {
+    fontWeight: 'bold',
+  },
+  em: {
+    fontStyle: 'italic',
+  },
+  heading1: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  heading2: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  heading3: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  heading4: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  heading5: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  heading6: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  bullet_list: {
+    marginVertical: 8,
+  },
+  ordered_list: {
+    marginVertical: 8,
+  },
+  list_item: {
+    flexDirection: 'row',
+    marginVertical: 4,
+  },
+  blockquote: {
+    backgroundColor: '#F0F0F0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#CCCCCC',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginVertical: 8,
+  },
+  link: {
+    color: '#0366d6',
+    textDecorationLine: 'underline',
+  },
+  hr: {
+    backgroundColor: '#CCCCCC',
+    height: 1,
+    marginVertical: 8,
+  },
+};
+
+const markdownStylesUser = {
+  body: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  paragraph: {
+    marginVertical: 8,
+  },
+  strong: {
+    fontWeight: 'bold',
+  },
+  em: {
+    fontStyle: 'italic',
+  },
+  heading1: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  heading2: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  heading3: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  heading4: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  heading5: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  heading6: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  bullet_list: {
+    marginVertical: 8,
+  },
+  ordered_list: {
+    marginVertical: 8,
+  },
+  list_item: {
+    flexDirection: 'row',
+    marginVertical: 4,
+  },
+  blockquote: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginVertical: 8,
+  },
+  link: {
+    color: '#ADD8E6',
+    textDecorationLine: 'underline',
+  },
+  hr: {
+    backgroundColor: '#FFFFFF',
+    height: 1,
+    marginVertical: 8,
+  },
 };
 
 const styles = StyleSheet.create({

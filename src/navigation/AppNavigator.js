@@ -23,7 +23,7 @@ import NotesScreen from '../screens/learning/NotesScreen';
 import ChatScreen from '../screens/learning/ChatScreen';
 
 // Assignment Screens
-import AssignmentsScreen from '../screens/AssignmentsScreen';
+import AssignmentsScreen from '../screens/assignments/AssignmentsScreen';
 import AssignmentQuizScreen from '../screens/AssignmentQuizScreen';
 
 const Stack = createNativeStackNavigator();

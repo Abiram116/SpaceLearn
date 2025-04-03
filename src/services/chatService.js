@@ -2,9 +2,10 @@ import { supabase, handleResponse } from '../api/supabase/client';
 import { userService } from './userService';
 import Constants from 'expo-constants';
 
-// Updated for the correct Gemini API endpoint (v1 instead of v1beta)
-const GOOGLE_AI_API_KEY = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_AI_API_KEY || 
-                          process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY;
+// Get API key directly from environment variables
+const GOOGLE_AI_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY || 
+                          Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_AI_API_KEY || 
+                          Constants.manifest?.extra?.EXPO_PUBLIC_GOOGLE_AI_API_KEY;
 // Updated to use v1 instead of v1beta and use the right model
 const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent';
 
@@ -20,6 +21,7 @@ const ERROR_MESSAGES = {
 const isNetworkError = (error) => {
   return error.message === 'Network request failed' || 
          error.name === 'AuthRetryableFetchError' ||
+         error.message.includes('network') ||
          (typeof navigator !== 'undefined' && !navigator.onLine);
 };
 
@@ -27,15 +29,27 @@ const isNetworkError = (error) => {
 const callGeminiAPI = async (message) => {
   // Check if API key is present
   if (!GOOGLE_AI_API_KEY) {
-    console.error('Google AI API key is missing');
-    throw new Error('API configuration error');
+    console.error('Google AI API key is missing. Check your .env file and make sure EXPO_PUBLIC_GOOGLE_AI_API_KEY is set correctly.');
+    throw new Error('API configuration error: Missing API key');
   }
 
   console.log('Calling Gemini API with endpoint:', API_ENDPOINT);
-  console.log('API key available:', !!GOOGLE_AI_API_KEY);
+  console.log('API key available:', GOOGLE_AI_API_KEY ? 'Yes' : 'No');
   
   try {
-    const response = await fetch(`${API_ENDPOINT}?key=${GOOGLE_AI_API_KEY}`, {
+    // For testing network connectivity
+    try {
+      const testResponse = await fetch('https://www.google.com');
+      console.log('Network connectivity test:', testResponse.ok ? 'Success' : 'Failed');
+    } catch (testError) {
+      console.error('Network connectivity test failed:', testError.message);
+      throw new Error(ERROR_MESSAGES.NETWORK);
+    }
+
+    const url = `${API_ENDPOINT}?key=${GOOGLE_AI_API_KEY}`;
+    console.log('Full API URL (without key):', API_ENDPOINT + '?key=[REDACTED]');
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -91,6 +105,12 @@ const callGeminiAPI = async (message) => {
         } catch (listError) {
           console.error('Error listing models:', listError);
         }
+      } else if (response.status === 400) {
+        console.error('Bad request. Check your API request format.');
+      } else if (response.status === 401 || response.status === 403) {
+        console.error('Authentication error. Check your API key.');
+      } else if (response.status >= 500) {
+        console.error('Server error. The API service might be experiencing issues.');
       }
       
       throw new Error(`AI API Error: ${response.status}`);
@@ -103,6 +123,7 @@ const callGeminiAPI = async (message) => {
     }
     return data.candidates[0].content.parts[0].text;
   } catch (error) {
+    console.error('Error in callGeminiAPI:', error.message, error.stack);
     // Improve network error detection
     if (isNetworkError(error)) {
       throw new Error(ERROR_MESSAGES.NETWORK);
