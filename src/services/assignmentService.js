@@ -8,34 +8,41 @@ export const generateAssignment = async (subspaceName, subspaceDescription, subj
     if (userError) throw userError;
     if (!user) throw new Error('No user logged in');
 
-    const prompt = `Generate 30 questions (10 each for easy, medium, and hard difficulty) for the topic: ${subspaceName}
-    Description: ${subspaceDescription}
+    const prompt = `Generate 10 detailed and specific questions about the topic: ${subspaceName}
+    Description of the topic: ${subspaceDescription}
     
-    For easy level: All questions should be multiple choice.
-    For medium level: Mark 3 questions as "type": "written", the rest as "type": "quiz".
-    For hard level: Mark 4 questions as "type": "written", the rest as "type": "quiz".
+    IMPORTANT: Make sure all questions are DIRECTLY related to the topic "${subspaceName}" - do not generate generic questions or questions about unrelated topics.
+    
+    Create a mix of different question types:
+    - 3 multiple choice questions with challenging options that test deeper understanding
+    - 3 true/false questions that focus on common misconceptions about this topic
+    - 4 short-answer questions that require application of knowledge about this specific topic
     
     Format the response as a JSON object with the following structure:
     {
-      "easy": [
+      "questions": [
         {
-          "question": "question text",
-          "type": "quiz",
+          "question": "question text that is specific to ${subspaceName}",
+          "type": "multiple_choice",
           "options": ["option1", "option2", "option3", "option4"],
           "correctAnswer": "correct option",
-          "explanation": "explanation of the correct answer for later feedback"
-        }
-      ],
-      "medium": [
-        {
-          "question": "question text",
-          "type": "quiz or written",
-          "options": ["option1", "option2", "option3", "option4"] (only for quiz type),
-          "correctAnswer": "correct option or sample answer",
           "explanation": "explanation of the correct answer"
+        },
+        {
+          "question": "question text that is specific to ${subspaceName}",
+          "type": "true_false",
+          "correctAnswer": true,
+          "explanation": "explanation of why this is true/false"
+        },
+        {
+          "question": "question text that is specific to ${subspaceName}",
+          "type": "written",
+          "correctAnswer": "sample answer",
+          "explanation": "explanation of what a good answer should include"
         }
       ],
-      "hard": [...same structure as medium...]
+      "title": "A descriptive title for this ${subspaceName} assignment",
+      "description": "A brief description of what this assignment covers about ${subspaceName}"
     }`;
 
     const response = await fetch(`${API_ENDPOINT}?key=${GOOGLE_AI_API_KEY}`, {
@@ -71,14 +78,16 @@ export const generateAssignment = async (subspaceName, subspaceDescription, subj
     
     const questions = JSON.parse(jsonString);
     
-    // Store the assignment in Supabase
+    // Store the assignment in Supabase with title and description
     const { data: assignment, error } = await supabase
       .from('assignments')
       .insert({
         user_id: user.id,
         subject_id: subjectId,
         subspace_name: subspaceName,
-        questions: questions
+        title: questions.title || `${subspaceName} Assignment`,
+        description: questions.description || `Questions about ${subspaceName}`,
+        questions: questions.questions
       })
       .select()
       .single();
@@ -93,7 +102,7 @@ export const generateAssignment = async (subspaceName, subspaceDescription, subj
 };
 
 // Evaluate user's assignment responses
-export const evaluateAssignment = async (assignmentId, responses, difficulty) => {
+export const evaluateAssignment = async (assignmentId, responses) => {
   try {
     // Get assignment data
     const { data: assignment, error } = await supabase
@@ -105,10 +114,10 @@ export const evaluateAssignment = async (assignmentId, responses, difficulty) =>
     if (error) throw error;
     
     // Get original questions
-    const questions = assignment.questions[difficulty];
+    const questions = assignment.questions;
     
     // Build prompt for AI evaluation
-    let prompt = `Evaluate the following ${difficulty} level assignment responses for the topic "${assignment.subspace_name}".\n\n`;
+    let prompt = `Evaluate the following assignment responses for the topic "${assignment.subspace_name}".\n\n`;
     
     let correctCount = 0;
     responses.forEach((response, index) => {
@@ -126,8 +135,6 @@ export const evaluateAssignment = async (assignmentId, responses, difficulty) =>
       } else { // written
         prompt += `Sample answer: ${question.correctAnswer}\n`;
         prompt += `User's answer: ${response.answer}\n\n`;
-        
-        // For written questions, correctness will be determined by AI
       }
     });
     
@@ -172,7 +179,6 @@ export const evaluateAssignment = async (assignmentId, responses, difficulty) =>
       .insert({
         user_id: (await supabase.auth.getUser()).data.user.id,
         assignment_id: assignmentId,
-        difficulty: difficulty,
         score: correctCount,
         total_questions: questions.length,
         evaluation: evaluation,

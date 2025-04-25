@@ -6,7 +6,6 @@ CREATE TABLE assignment_results (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   assignment_id UUID REFERENCES assignments(id) ON DELETE CASCADE,
-  difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
   score INTEGER NOT NULL CHECK (score >= 0),
   total_questions INTEGER NOT NULL CHECK (total_questions > 0),
   evaluation TEXT NOT NULL,
@@ -37,7 +36,6 @@ COMMENT ON TABLE assignment_results IS 'Stores results of assignments completed 
 COMMENT ON COLUMN assignment_results.id IS 'Unique identifier for the assignment result';
 COMMENT ON COLUMN assignment_results.user_id IS 'Reference to the user who completed the assignment';
 COMMENT ON COLUMN assignment_results.assignment_id IS 'Reference to the completed assignment';
-COMMENT ON COLUMN assignment_results.difficulty IS 'Difficulty level of the assignment (easy, medium, hard)';
 COMMENT ON COLUMN assignment_results.score IS 'Number of correct answers';
 COMMENT ON COLUMN assignment_results.total_questions IS 'Total number of questions in the assignment';
 COMMENT ON COLUMN assignment_results.evaluation IS 'Overall evaluation or feedback for the assignment';

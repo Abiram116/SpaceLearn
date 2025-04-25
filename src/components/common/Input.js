@@ -1,90 +1,54 @@
 import React, { forwardRef } from 'react';
-import { TextInput, View, StyleSheet, Platform } from 'react-native';
+import { View, TextInput, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
+import { colors, typography, spacing, borderRadius } from '../../styles/theme';
 
 export const Input = forwardRef(({
   icon,
-  style,
-  containerStyle,
-  error,
-  multiline = false,
-  secureTextEntry,
+  placeholder,
+  value,
   onChangeText,
-  onSubmitEditing,
+  secureTextEntry,
   keyboardType,
+  autoCapitalize = 'none',
   returnKeyType,
+  onSubmitEditing,
   blurOnSubmit,
+  error,
   ...props
 }, ref) => {
-  const handleChange = (e) => {
-    if (Platform.OS === 'web') {
-      onChangeText?.(e.target.value);
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (Platform.OS === 'web' && e.key === 'Enter' && onSubmitEditing) {
-      e.preventDefault();
-      onSubmitEditing();
-    }
-  };
-
-  const getInputType = () => {
-    if (secureTextEntry) return 'password';
-    if (keyboardType === 'email-address') return 'email';
-    if (keyboardType === 'number-pad') return 'number';
-    return 'text';
-  };
-
   return (
-    <View style={[styles.container, error && styles.errorContainer, containerStyle]}>
-      {icon && (
-        <Ionicons 
-          name={icon} 
-          size={20} 
-          color={error ? colors.error : colors.textSecondary} 
-          style={styles.icon}
-        />
-      )}
-      {Platform.OS === 'web' ? (
-        <input
-          ref={ref}
-          style={{
-            flex: 1,
-            border: 'none',
-            backgroundColor: 'transparent',
-            color: colors.text,
-            fontSize: '16px',
-            padding: `${spacing.sm}px`,
-            width: '100%',
-            outline: 'none',
-            minHeight: '40px',
-            fontFamily: 'inherit',
-          }}
-          type={getInputType()}
-          onChange={handleChange}
-          onKeyDown={handleKeyPress}
-          {...props}
-        />
-      ) : (
+    <View style={styles.container}>
+      <View style={[
+        styles.inputContainer,
+        error ? styles.inputContainerError : null
+      ]}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={20}
+            color={colors.primary}
+            style={styles.icon}
+          />
+        )}
         <TextInput
           ref={ref}
-          style={[
-            styles.input,
-            icon && styles.inputWithIcon,
-            multiline && styles.multilineInput,
-            style,
-          ]}
+          style={styles.input}
+          placeholder={placeholder}
           placeholderTextColor={colors.textSecondary}
-          secureTextEntry={secureTextEntry}
+          value={value}
           onChangeText={onChangeText}
-          onSubmitEditing={onSubmitEditing}
+          secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
           returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
           blurOnSubmit={blurOnSubmit}
           {...props}
         />
+      </View>
+      {error && typeof error === 'string' && (
+        <Text style={styles.errorText}>{error}</Text>
       )}
     </View>
   );
@@ -92,39 +56,35 @@ export const Input = forwardRef(({
 
 const styles = StyleSheet.create({
   container: {
+    marginBottom: spacing.md,
+  },
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    minHeight: Platform.OS === 'ios' ? 56 : 48,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.small,
+    overflow: 'hidden',
   },
-  errorContainer: {
+  inputContainerError: {
     borderColor: colors.error,
   },
   icon: {
-    marginRight: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   input: {
     flex: 1,
-    ...typography.body,
+    fontSize: 16,
     color: colors.text,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
-    minHeight: Platform.OS === 'ios' ? 44 : 40,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    lineHeight: Platform.OS === 'ios' ? 22 : undefined,
+    paddingVertical: spacing.md,
+    paddingRight: spacing.md,
+    paddingLeft: 0,
   },
-  inputWithIcon: {
-    marginLeft: 0,
-  },
-  multilineInput: {
-    minHeight: Platform.OS === 'ios' ? 100 : 80,
-    paddingTop: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
-    textAlignVertical: 'top',
+  errorText: {
+    color: colors.error,
+    ...typography.caption,
+    marginTop: spacing.xs,
+    marginLeft: spacing.sm,
   },
 }); 

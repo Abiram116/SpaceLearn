@@ -9,7 +9,9 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
-  Platform
+  Platform,
+  TextInput,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
@@ -19,34 +21,19 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import AnimatedView from '../../components/common/AnimatedView';
 import { useTheme } from '../../context/ThemeContext';
+import { setGoogleAIApiKey } from '../../services/googleAI';
 
 const ProfileScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const [user, setUser] = useState(null);
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [assignmentPoints, setAssignmentPoints] = useState(0);
+  const [apiKey, setApiKey] = useState('');
+  const [apiKeySaved, setApiKeySaved] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
   }, []);
-
-  const getUserAssignmentPoints = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('assignment_results')
-        .select('score')
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-      
-      const totalPoints = data.reduce((sum, result) => sum + result.score, 0);
-      return totalPoints;
-    } catch (error) {
-      console.error('Error fetching assignment points:', error);
-      return 0;
-    }
-  };
 
   const loadUserProfile = async () => {
     try {
@@ -58,10 +45,6 @@ const ProfileScreen = ({ navigation }) => {
           notification_enabled: true,
           ...userData.user_preferences?.[0]
         });
-        
-        // Get assignment points
-        const points = await getUserAssignmentPoints(userData.id);
-        setAssignmentPoints(points);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -141,6 +124,16 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
+  const handleSaveApiKey = () => {
+    if (apiKey.trim()) {
+      setGoogleAIApiKey(apiKey.trim());
+      setApiKeySaved(true);
+      Alert.alert('Success', 'API key has been saved for this session');
+    } else {
+      Alert.alert('Error', 'Please enter a valid API key');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -163,6 +156,8 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="dark-content" />
+      
       <AnimatedView animation="fade">
         <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
           <View style={styles.avatarContainer}>
@@ -195,16 +190,6 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.content}>
         <AnimatedView animation="slide" delay={200}>
           <Card style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
-                <Ionicons name="trophy" size={24} color={theme.colors.primary} />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Assignment Points</Text>
-                <Text style={[styles.infoValue, { color: theme.colors.text }]}>{assignmentPoints}</Text>
-              </View>
-            </View>
-
             <View style={styles.infoRow}>
               <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
                 <Ionicons name="flame" size={24} color={theme.colors.primary} />
@@ -272,6 +257,41 @@ const ProfileScreen = ({ navigation }) => {
               </View>
               <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
+          </Card>
+        </AnimatedView>
+
+        <AnimatedView animation="slide" delay={500}>
+          <Text style={styles.sectionTitle}>API Settings</Text>
+          <Card style={styles.settingsCard}>
+            <View style={styles.apiKeyContainer}>
+              <Text style={styles.apiKeyLabel}>Google AI API Key</Text>
+              <TextInput
+                style={styles.apiKeyInput}
+                placeholder="Enter your Google AI API key"
+                value={apiKey}
+                onChangeText={setApiKey}
+                secureTextEntry={true}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={styles.apiKeyHelper}>
+                The API key will be stored temporarily for this session only.
+              </Text>
+              <Button
+                title={apiKeySaved ? "API Key Saved" : "Save API Key"}
+                onPress={handleSaveApiKey}
+                type={apiKeySaved ? "secondary" : "primary"}
+                style={styles.apiKeyButton}
+              />
+              
+              <TouchableOpacity
+                style={styles.testApiButton}
+                onPress={() => navigation.navigate('APITest')}
+              >
+                <Text style={styles.testApiText}>Test API Key</Text>
+                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </Card>
         </AnimatedView>
 
@@ -462,6 +482,46 @@ const styles = StyleSheet.create({
   deleteAccountText: {
     ...typography.body,
     color: colors.error,
+  },
+  apiKeyContainer: {
+    padding: spacing.md,
+  },
+  apiKeyLabel: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '500',
+    marginBottom: spacing.sm,
+  },
+  apiKeyInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    ...typography.body,
+    color: colors.text,
+    backgroundColor: colors.card,
+  },
+  apiKeyHelper: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  apiKeyButton: {
+    marginTop: spacing.sm,
+  },
+  testApiButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    padding: spacing.sm,
+  },
+  testApiText: {
+    ...typography.body,
+    color: colors.primary,
+    marginRight: spacing.xs,
   },
 });
 

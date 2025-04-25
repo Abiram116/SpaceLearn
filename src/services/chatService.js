@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 const GOOGLE_AI_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY || 
                           Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_AI_API_KEY || 
                           Constants.manifest?.extra?.EXPO_PUBLIC_GOOGLE_AI_API_KEY;
+
 // Updated to use v1 instead of v1beta and use the right model
 const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent';
 

@@ -4,9 +4,11 @@ DROP TABLE IF EXISTS assignments CASCADE;
 -- Create assignments table with updated structure
 CREATE TABLE assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   subject_id UUID REFERENCES subjects ON DELETE CASCADE,
   subspace_name TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
   questions JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

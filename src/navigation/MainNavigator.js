@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/main/HomeScreen';
 import SubjectsScreen from '../screens/learning/SubjectsScreen';
@@ -7,9 +8,42 @@ import NotesScreen from '../screens/learning/NotesScreen';
 import AssignmentsScreen from '../screens/assignments/AssignmentsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import ChatScreen from '../screens/main/ChatScreen';
+import APITestScreen from '../screens/main/APITestScreen';
 import { colors, typography } from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+
+// Create a Profile stack to include the API test screen
+const ProfileStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.background,
+        },
+        headerTitleStyle: {
+          ...typography.h2,
+          color: colors.text,
+        },
+        headerShadowVisible: false,
+        headerBackTitleVisible: false,
+        headerTintColor: colors.primary,
+      }}
+    >
+      <Stack.Screen
+        name="ProfileMain"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="APITest"
+        component={APITestScreen}
+        options={{ title: 'API Test' }}
+      />
+    </Stack.Navigator>
+  );
+};
 
 const MainNavigator = () => {
   return (
@@ -83,9 +117,10 @@ const MainNavigator = () => {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           title: 'Profile',
+          headerShown: false,
         }}
       />
     </Tab.Navigator>

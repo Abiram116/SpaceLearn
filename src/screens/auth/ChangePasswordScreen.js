@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Platform, StatusBar, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, layout, typography } from '../../styles/theme';
 import Button from '../../components/common/Button';
@@ -19,6 +19,32 @@ const ChangePasswordScreen = ({ navigation }) => {
   const currentPasswordRef = useRef(null);
   const newPasswordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
+
+  // Set up navigation options with back button
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Change Password',
+      headerShown: true,
+      headerStyle: {
+        backgroundColor: colors.background,
+        elevation: 0,
+        shadowOpacity: 0,
+        borderBottomWidth: 0,
+      },
+      headerTintColor: colors.primary,
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const handleSubmit = async () => {
     if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
@@ -46,6 +72,7 @@ const ChangePasswordScreen = ({ navigation }) => {
 
   return (
     <KeyboardAwareView>
+      <StatusBar barStyle="dark-content" />
       <View style={styles.container}>
         <View style={styles.header}>
           <Ionicons name="lock-closed" size={60} color={colors.primary} />
@@ -102,13 +129,6 @@ const ChangePasswordScreen = ({ navigation }) => {
             isLoading={isLoading}
             style={styles.submitButton}
           />
-
-          <Button
-            title="Cancel"
-            onPress={() => navigation.goBack()}
-            variant="secondary"
-            style={styles.cancelButton}
-          />
         </View>
       </View>
     </KeyboardAwareView>
@@ -121,6 +141,10 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.xl : spacing.xl,
     backgroundColor: colors.background,
+  },
+  backButton: {
+    padding: 10,
+    marginLeft: 6,
   },
   header: {
     alignItems: 'center',
@@ -149,9 +173,6 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: spacing.lg,
-  },
-  cancelButton: {
-    marginTop: spacing.md,
   },
 });
 

@@ -1,17 +1,20 @@
 import { StyleSheet, Dimensions, Platform, StatusBar } from 'react-native';
 
+const window = Dimensions.get('window');
+
 export const colors = {
-  primary: '#6C63FF',
-  secondary: '#4CAF50',
+  primary: '#4F46E5',
+  primaryLight: '#EEF2FF',
+  secondary: '#10B981',
   background: '#FFFFFF',
-  card: '#F8F9FA',
-  text: '#2D3748',
-  textSecondary: '#718096',
-  border: '#E2E8F0',
-  error: '#FF5252',
-  success: '#4CAF50',
-  warning: '#FFC107',
-  info: '#2196F3',
+  card: '#FFFFFF',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+  error: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+  info: '#3B82F6',
   overlay: 'rgba(0, 0, 0, 0.5)',
   ripple: 'rgba(108, 99, 255, 0.1)',
 
@@ -51,14 +54,14 @@ export const spacing = {
 
 export const typography = {
   h1: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 40,
+    fontSize: 28,
+    fontWeight: '700',
+    lineHeight: 34,
   },
   h2: {
     fontSize: 24,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    fontWeight: '600',
+    lineHeight: 30,
   },
   h3: {
     fontSize: 20,
@@ -67,27 +70,35 @@ export const typography = {
   },
   body: {
     fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+  button: {
+    fontSize: 16,
+    fontWeight: '600',
     lineHeight: 24,
   },
   caption: {
     fontSize: 14,
+    fontWeight: '400',
     lineHeight: 20,
   },
   small: {
     fontSize: 12,
+    fontWeight: '400',
     lineHeight: 16,
   },
 };
 
 export const layout = {
   window: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    width: window.width,
+    height: window.height,
   },
-  isSmallDevice: Dimensions.get('window').width < 375,
-  statusBarHeight: Platform.OS === 'ios' ? 44 : StatusBar.currentHeight,
+  statusBarHeight: Platform.OS === 'ios' ? 44 : 0,
+  bottomSpacing: Platform.OS === 'ios' ? 34 : 16,
+  isSmallDevice: window.width < 375,
   headerHeight: Platform.OS === 'ios' ? 88 : 64,
-  bottomSpacing: Platform.OS === 'ios' ? 34 : 24,
   safeAreaPadding: {
     paddingTop: Platform.OS === 'ios' ? 44 : StatusBar.currentHeight,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
@@ -95,36 +106,55 @@ export const layout = {
 };
 
 export const shadows = {
-  small: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  none: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
-  medium: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
+  small: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  large: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
+    android: {
+      elevation: 2,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
+    default: {
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    },
+  }),
+  medium: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 4,
+    },
+    default: {
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    },
+  }),
+  large: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+    },
+    android: {
+      elevation: 8,
+    },
+    default: {
+      boxShadow: '0 10px 15px rgba(0, 0, 0, 0.1)',
+    },
+  }),
 };
 
 export const borderRadius = {
@@ -132,7 +162,7 @@ export const borderRadius = {
   md: 8,
   lg: 12,
   xl: 16,
-  round: 999,
+  round: 9999,
 };
 
 export const buttons = {

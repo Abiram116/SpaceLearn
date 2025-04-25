@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
@@ -37,6 +38,31 @@ const EditProfileScreen = ({ route, navigation }) => {
     bio: user.bio || '',
     avatar_url: user.avatar_url || '',
   });
+
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Edit Profile',
+      headerShown: true,
+      headerStyle: {
+        backgroundColor: colors.background,
+        elevation: 0,
+        shadowOpacity: 0,
+        borderBottomWidth: 0,
+      },
+      headerTintColor: colors.primary,
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const fullNameRef = useRef(null);
   const usernameRef = useRef(null);
@@ -90,6 +116,7 @@ const EditProfileScreen = ({ route, navigation }) => {
 
   return (
     <KeyboardAwareView>
+      <StatusBar barStyle="dark-content" />
       <ScrollView 
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
@@ -243,6 +270,10 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.lg,
+  },
+  backButton: {
+    padding: 10,
+    marginLeft: 6,
   },
   avatarSection: {
     alignItems: 'center',

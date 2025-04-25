@@ -1,83 +1,52 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors, typography, borderRadius, shadows } from '../../styles/theme';
+import { 
+  TouchableOpacity, 
+  Text, 
+  StyleSheet,
+  ActivityIndicator,
+  View
+} from 'react-native';
+import { colors, typography, borderRadius, spacing } from '../../styles/theme';
 
 const Button = ({
   title,
   onPress,
-  variant = 'primary',
-  size = 'medium',
-  loading = false,
-  disabled = false,
+  type = 'primary',
   style,
+  textStyle,
+  isLoading = false,
+  disabled = false,
+  ...props
 }) => {
-  const getVariantStyle = () => {
-    switch (variant) {
-      case 'secondary':
-        return styles.secondaryButton;
-      case 'outline':
-        return styles.outlineButton;
-      case 'text':
-        return styles.textButton;
-      default:
-        return styles.primaryButton;
-    }
-  };
+  const buttonStyle = [
+    styles.button,
+    type === 'primary' ? styles.primary : styles.secondary,
+    disabled && styles.disabled,
+    style,
+  ];
 
-  const getTextStyle = () => {
-    switch (variant) {
-      case 'secondary':
-        return styles.secondaryText;
-      case 'outline':
-        return styles.outlineText;
-      case 'text':
-        return styles.textButtonText;
-      default:
-        return styles.primaryText;
-    }
-  };
-
-  const getSizeStyle = () => {
-    switch (size) {
-      case 'small':
-        return styles.smallButton;
-      case 'large':
-        return styles.largeButton;
-      default:
-        return styles.mediumButton;
-    }
-  };
+  const textStyleComp = [
+    styles.text,
+    type === 'primary' ? styles.primaryText : styles.secondaryText,
+    disabled && styles.disabledText,
+    textStyle,
+  ];
 
   return (
     <TouchableOpacity
-      style={[
-        styles.button,
-        getVariantStyle(),
-        getSizeStyle(),
-        disabled && styles.disabledButton,
-        style,
-      ]}
+      style={buttonStyle}
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={disabled || isLoading}
       activeOpacity={0.7}
+      {...props}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? colors.background : colors.primary}
-          size="small"
+      {isLoading ? (
+        <ActivityIndicator 
+          color={type === 'primary' ? colors.background : colors.primary} 
+          size="small" 
         />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            getTextStyle(),
-            disabled && styles.disabledText,
-            size === 'small' && styles.smallText,
-            size === 'large' && styles.largeText,
-          ]}
-        >
-          {title}
-        </Text>
+        <Text style={textStyleComp}>{title}</Text>
       )}
     </TouchableOpacity>
   );
@@ -85,68 +54,38 @@ const Button = ({
 
 const styles = StyleSheet.create({
   button: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    ...shadows.small,
+    alignItems: 'center',
+    minHeight: 48,
   },
-  primaryButton: {
+  primary: {
     backgroundColor: colors.primary,
   },
-  secondaryButton: {
-    backgroundColor: colors.secondary,
-  },
-  outlineButton: {
+  secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: colors.primary,
   },
-  textButton: {
-    backgroundColor: 'transparent',
-    ...shadows.none,
-  },
-  smallButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  mediumButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  largeButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+  disabled: {
+    backgroundColor: colors.border,
+    borderColor: colors.border,
+    opacity: 0.7,
   },
   text: {
-    ...typography.body,
-    fontWeight: '600',
+    ...typography.button,
+    fontSize: 16,
   },
   primaryText: {
     color: colors.background,
   },
   secondaryText: {
-    color: colors.background,
-  },
-  outlineText: {
     color: colors.primary,
-  },
-  textButtonText: {
-    color: colors.primary,
-  },
-  disabledButton: {
-    backgroundColor: colors.border,
-    borderColor: colors.border,
   },
   disabledText: {
     color: colors.textSecondary,
-  },
-  smallText: {
-    ...typography.small,
-    fontWeight: '600',
-  },
-  largeText: {
-    ...typography.h3,
   },
 });
 

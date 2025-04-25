@@ -1,429 +1,487 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  FlatList,
   TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
   TextInput,
+  ActivityIndicator,
+  Dimensions,
+  Alert,
+  SafeAreaView,
+  ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { supabase } from '../api/supabase/client';
-import { API_ENDPOINT } from '../config/constants';
-import Constants from 'expo-constants';
+import { colors, spacing, typography } from '../styles/theme';
+import { getAssignmentById } from '../services/assignmentService';
 
-const GOOGLE_AI_API_KEY = Constants.expoConfig.extra.EXPO_PUBLIC_GOOGLE_AI_API_KEY;
+const { width } = Dimensions.get('window');
 
 const AssignmentQuizScreen = ({ route, navigation }) => {
-  const theme = useTheme();
-  const { subspaceName, difficulty, questions, assignmentId, subjectId } = route.params;
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [typedAnswer, setTypedAnswer] = useState('');
-  const [score, setScore] = useState(0);
-  const [showResults, setShowResults] = useState(false);
-  const [answers, setAnswers] = useState([]);
-  const [timeRemaining, setTimeRemaining] = useState(difficulty === 'easy' ? 600 : null); // 10 min for easy
+  const { assignment } = route.params;
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [textInput, setTextInput] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState(null);
-  const timerRef = useRef(null);
-
-  // Determine which questions are typed based on difficulty
-  const typedQuestionIndices = useMemo(() => {
-    if (difficulty === 'easy') return [];
-    if (difficulty === 'medium') return [2, 5, 8]; // 3 typed questions
-    if (difficulty === 'hard') return [1, 3, 6, 9]; // 4 typed questions
-    return [];
-  }, [difficulty]);
-
+  const [showResults, setShowResults] = useState(false);
+  const [score, setScore] = useState(0);
+  const [showAnswerExplanation, setShowAnswerExplanation] = useState(false);
+  
+  const flatListRef = useRef(null);
+  
   useEffect(() => {
-    // Set navigation title
-    navigation.setOptions({
-      title: `${subspaceName} - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
-      headerShown: true,
-      headerStyle: {
-        backgroundColor: theme.colors.background,
-      },
-      headerTintColor: theme.colors.text,
-      headerTitleStyle: {
-        fontWeight: 'bold',
-      },
-    });
-
-    // Setup timer for easy difficulty
-    if (difficulty === 'easy' && timeRemaining !== null) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            Alert.alert("Time's up!", "Your quiz will be submitted now.");
-            handleSubmitQuiz();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    // Initialize answers array
+    if (assignment && assignment.questions) {
+      const initialAnswers = assignment.questions.map(() => ({
+        answer: null,
+        isCorrect: false,
+        submitted: false
+      }));
+      setUserAnswers(initialAnswers);
     }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+  }, [assignment]);
+  
+  useEffect(() => {
+    console.log('Assignment data loaded:', assignment?.title || 'No title');
+    console.log('Number of questions:', assignment?.questions?.length || 0);
+    if (assignment?.questions?.length > 0) {
+      console.log('Question types:', assignment.questions.map(q => q.type).join(', '));
+    }
+  }, [assignment]);
+  
+  const handleAnswer = (answer) => {
+    const currentQuestion = assignment.questions[currentQuestionIndex];
+    const isCorrect = 
+      currentQuestion.type === 'written' 
+        ? null // Written answers need manual evaluation
+        : (currentQuestion.type === 'true_false' 
+           ? answer === currentQuestion.correctAnswer 
+           : answer === currentQuestion.correctAnswer);
+    
+    const updatedAnswers = [...userAnswers];
+    updatedAnswers[currentQuestionIndex] = {
+      answer,
+      isCorrect,
+      submitted: true
     };
-  }, [navigation, subspaceName, difficulty, theme]);
-
-  const isTypedQuestion = (index) => {
-    return typedQuestionIndices.includes(index);
-  };
-
-  const handleSelectAnswer = (answer) => {
-    setSelectedAnswer(answer);
-  };
-
-  const handleNextQuestion = () => {
-    // Validate answer input for typed questions
-    if (isTypedQuestion(currentQuestion) && !typedAnswer.trim()) {
-      Alert.alert("Empty Answer", "Please provide an answer before continuing.");
-      return;
-    }
-
-    // Save answer
-    const currentQuestionObj = questions[currentQuestion];
-    const isTyped = isTypedQuestion(currentQuestion);
+    setUserAnswers(updatedAnswers);
     
-    let isCorrect = false;
-    if (isTyped) {
-      // For typed questions, we'll evaluate later with AI
-      isCorrect = null; // To be determined by AI
-    } else {
-      isCorrect = selectedAnswer === currentQuestionObj.correctAnswer;
-      if (isCorrect) {
-        setScore(score + 1);
+    // For text input, clear the field
+    if (assignment.questions[currentQuestionIndex].type === 'written') {
+      setTextInput('');
+    }
+    
+    // Auto-advance to next question after a short delay
+    setTimeout(() => {
+      if (currentQuestionIndex < assignment.questions.length - 1) {
+        goToNextQuestion();
       }
-    }
-    
-    setAnswers([...answers, { 
-      question: currentQuestionObj.question,
-      selected: isTyped ? typedAnswer : selectedAnswer,
-      correct: currentQuestionObj.correctAnswer,
-      isCorrect: isCorrect,
-      isTyped: isTyped
-    }]);
-    
-    // Move to next question or show results
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer(null);
-      setTypedAnswer('');
-    } else {
-      handleSubmitQuiz();
+    }, 500);
+  };
+  
+  const goToNextQuestion = () => {
+    const nextIndex = currentQuestionIndex + 1;
+    setCurrentQuestionIndex(nextIndex);
+    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    setShowAnswerExplanation(false);
+  };
+  
+  const goToPreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      const prevIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(prevIndex);
+      flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+      setShowAnswerExplanation(false);
     }
   };
-
-  const handleSubmitQuiz = async () => {
+  
+  const handleTextInputSubmit = () => {
+    if (textInput.trim()) {
+      handleAnswer(textInput.trim());
+    }
+  };
+  
+  const handleSubmit = () => {
+    // Check if all questions are answered
+    const unansweredCount = userAnswers.filter(a => !a.submitted).length;
+    if (unansweredCount > 0) {
+      Alert.alert(
+        'Incomplete Assignment',
+        `You have ${unansweredCount} unanswered questions. Do you want to continue?`,
+        [
+          {
+            text: 'Continue Answering',
+            style: 'cancel'
+          },
+          {
+            text: 'Submit Anyway',
+            onPress: () => submitAssignment()
+          }
+        ]
+      );
+    } else {
+      submitAssignment();
+    }
+  };
+  
+  const submitAssignment = async () => {
     setLoading(true);
     try {
-      // First handle multiple choice score
-      let currentScore = 0;
-      answers.forEach(answer => {
-        if (answer.isCorrect === true) {
-          currentScore += 1;
+      // Calculate score - only for multiple choice and true/false
+      let correctCount = 0;
+      let totalGraded = 0;
+      
+      assignment.questions.forEach((question, index) => {
+        if (question.type !== 'written') {
+          totalGraded++;
+          if (userAnswers[index]?.isCorrect) {
+            correctCount++;
+          }
         }
       });
-
-      // If we have typed answers, evaluate with AI
-      const typedAnswers = answers.filter(a => a.isTyped);
-      if (typedAnswers.length > 0) {
-        await evaluateTypedAnswers(typedAnswers);
-      } else {
-        setShowResults(true);
-      }
-
-      // Update user's score in database
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: userProfile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('flex_points')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!profileError) {
-          await supabase
-            .from('user_profiles')
-            .update({ 
-              flex_points: (userProfile?.flex_points || 0) + currentScore 
-            })
-            .eq('user_id', user.id);
-        }
-      }
+      
+      const scorePercentage = totalGraded > 0 
+        ? Math.round((correctCount / totalGraded) * 100) 
+        : 0;
+      
+      setScore(scorePercentage);
+      setSubmitted(true);
+      setShowResults(true);
     } catch (error) {
-      console.error('Error submitting quiz:', error);
+      console.error('Error submitting assignment:', error);
+      Alert.alert('Error', 'Failed to submit assignment');
     } finally {
       setLoading(false);
-      setShowResults(true);
     }
   };
-
-  const evaluateTypedAnswers = async (typedAnswers) => {
-    try {
-      // Prepare the evaluation prompt
-      const evaluationPrompt = `
-        Please evaluate the following answers for questions on the topic: ${subspaceName}.
-        
-        ${typedAnswers.map((a, i) => 
-          `Question ${i+1}: ${a.question}
-           User's Answer: ${a.selected}
-           Correct Answer: ${a.correct}`
-        ).join('\n\n')}
-        
-        For each answer, determine if it's correct (full point), partially correct (half point), or incorrect (no points).
-        Provide detailed feedback on each answer and explain why it's correct or incorrect.
-        
-        Finally, provide an overall assessment of the user's understanding and areas for improvement.
-        
-        Format your response as a JSON object with the following structure:
-        {
-          "evaluations": [
-            {
-              "questionIndex": 0,
-              "score": 1.0, // 1.0, 0.5, or 0
-              "feedback": "Detailed feedback on this answer"
-            },
-            ...
-          ],
-          "totalScore": 2.5, // Sum of all scores
-          "overallFeedback": "Overall assessment and improvement areas"
-        }
-      `;
-
-      const response = await fetch(`${API_ENDPOINT}?key=${GOOGLE_AI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: evaluationPrompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2048,
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      const evaluationText = data.candidates[0].content.parts[0].text;
-      
-      // Parse the JSON from the text response
-      const jsonStart = evaluationText.indexOf('{');
-      const jsonEnd = evaluationText.lastIndexOf('}') + 1;
-      const jsonString = evaluationText.substring(jsonStart, jsonEnd);
-      
-      const evaluation = JSON.parse(jsonString);
-
-      // Update answers with evaluation
-      let updatedScore = score;
-      const updatedAnswers = [...answers];
-      
-      evaluation.evaluations.forEach(evaluation => {
-        // Find the corresponding typed question in our answers array
-        const typedQuestionIndices = answers
-          .map((a, i) => a.isTyped ? i : -1)
-          .filter(i => i !== -1);
-        
-        if (typedQuestionIndices[evaluation.questionIndex] !== undefined) {
-          const answerIndex = typedQuestionIndices[evaluation.questionIndex];
-          updatedAnswers[answerIndex].isCorrect = evaluation.score > 0;
-          updatedAnswers[answerIndex].feedback = evaluation.feedback;
-          updatedScore += evaluation.score;
-        }
-      });
-      
-      setAnswers(updatedAnswers);
-      setScore(updatedScore);
-      setFeedback(evaluation.overallFeedback);
-    } catch (error) {
-      console.error('Error evaluating typed answers:', error);
-    }
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
+  
+  if (loading && !showResults) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+  
+  if (!assignment || !assignment.questions) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No assignment data available</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
   if (showResults) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.navigate('Assignments')}
+          >
+            <Ionicons name="close" size={24} color="#000000" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Assignment Results</Text>
+        </View>
+        
         <ScrollView style={styles.resultsContainer}>
-          <Text style={[styles.resultsTitle, { color: theme.colors.text }]}>Quiz Results</Text>
-          <View style={[styles.scoreContainer, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.scoreText, { color: theme.colors.text }]}>
-              Your score: {score}/{questions.length} 
-              ({Math.round((score / questions.length) * 100)}%)
-            </Text>
+          <View style={styles.scoreCard}>
+            <Text style={styles.scoreTitle}>Your Score</Text>
+            <Text style={styles.scoreValue}>{score}%</Text>
+            {score >= 70 ? (
+              <Text style={[styles.scoreFeedback, { color: '#4CAF50' }]}>Great job!</Text>
+            ) : score >= 50 ? (
+              <Text style={[styles.scoreFeedback, { color: '#FF9800' }]}>Good effort!</Text>
+            ) : (
+              <Text style={[styles.scoreFeedback, { color: '#F44336' }]}>Keep practicing!</Text>
+            )}
           </View>
           
-          {feedback && (
-            <View style={[styles.feedbackContainer, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.feedbackTitle, { color: theme.colors.primary }]}>AI Feedback</Text>
-              <Text style={[styles.feedbackText, { color: theme.colors.text }]}>{feedback}</Text>
-            </View>
-          )}
+          <Text style={styles.resultsHeading}>Question Review</Text>
           
-          <Text style={[styles.answersTitle, { color: theme.colors.text }]}>Your Answers:</Text>
-          {answers.map((answer, index) => (
-            <View key={index} style={[styles.resultItem, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.resultQuestion, { color: theme.colors.text }]}>
-                {index + 1}. {answer.question}
-              </Text>
-              <Text style={[styles.resultAnswer, { color: theme.colors.text }]}>
-                Your answer: <Text style={answer.isCorrect ? styles.correctAnswer : styles.wrongAnswer}>
-                  {answer.selected}
+          {assignment.questions.map((question, index) => {
+            const userAnswer = userAnswers[index];
+            const isCorrect = question.type !== 'written' && userAnswer?.isCorrect;
+            const isWrong = question.type !== 'written' && userAnswer?.submitted && !isCorrect;
+            
+            return (
+              <View key={index} style={styles.resultItem}>
+                <Text style={styles.resultQuestion}>
+                  {index + 1}. {question.question}
                 </Text>
-              </Text>
-              {!answer.isCorrect && (
-                <Text style={[styles.correctAnswerText, { color: theme.colors.text }]}>
-                  Correct answer: <Text style={styles.correctAnswer}>{answer.correct}</Text>
-                </Text>
-              )}
-              {answer.feedback && (
-                <Text style={[styles.answerFeedback, { color: theme.colors.textSecondary }]}>
-                  {answer.feedback}
-                </Text>
-              )}
-            </View>
-          ))}
-          
-          <TouchableOpacity 
-            style={[styles.doneButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
+                
+                <View style={styles.resultAnswerContainer}>
+                  <Text style={styles.resultLabel}>Your Answer:</Text>
+                  <Text style={[
+                    styles.resultAnswer,
+                    isCorrect && styles.correctAnswer,
+                    isWrong && styles.wrongAnswer
+                  ]}>
+                    {userAnswer?.answer !== null && userAnswer?.answer !== undefined 
+                      ? (question.type === 'true_false' 
+                         ? String(userAnswer.answer) 
+                         : userAnswer.answer)
+                      : 'Not answered'}
+                  </Text>
+                </View>
+                
+                {question.type !== 'written' && (
+                  <View style={styles.resultAnswerContainer}>
+                    <Text style={styles.resultLabel}>Correct Answer:</Text>
+                    <Text style={styles.correctAnswer}>
+                      {question.type === 'true_false' 
+                       ? String(question.correctAnswer) 
+                       : question.correctAnswer}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.resultExplanationContainer}>
+                  <Text style={styles.resultLabel}>Explanation:</Text>
+                  <Text style={styles.resultExplanation}>{question.explanation}</Text>
+                </View>
+              </View>
+            );
+          })}
         </ScrollView>
+        
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.submitAssignmentButton}
+            onPress={() => navigation.navigate('Assignments')}
+          >
+            <Text style={styles.submitAssignmentText}>Return to Assignments</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
-
-  const question = questions[currentQuestion];
-  const isCurrentQuestionTyped = isTypedQuestion(currentQuestion);
   
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {timeRemaining !== null && (
-        <View style={[styles.timerContainer, { backgroundColor: theme.colors.card }]}>
-          <Ionicons 
-            name="timer-outline" 
-            size={20} 
-            color={timeRemaining < 60 ? "#F44336" : theme.colors.text} 
-          />
-          <Text style={[
-            styles.timerText, 
-            { color: theme.colors.text },
-            timeRemaining < 60 && styles.timerWarning
-          ]}>
-            {formatTime(timeRemaining)}
+  const currentQuestion = assignment.questions[currentQuestionIndex];
+  
+  const renderQuestion = ({ item, index }) => {
+    const isActive = index === currentQuestionIndex;
+    const userAnswer = userAnswers[index];
+    const isSubmittedQuestion = userAnswer?.submitted;
+    
+    return (
+      <View style={[styles.questionContainer, { width }]}>
+        <View style={styles.questionHeader}>
+          <Text style={styles.questionNumber}>Question {index + 1}/{assignment.questions.length}</Text>
+          <Text style={styles.questionType}>
+            {item.type === 'multiple_choice' ? 'Multiple Choice' : 
+             item.type === 'true_false' ? 'True/False' : 'Written Answer'}
           </Text>
         </View>
-      )}
-      
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
-          <View 
-            style={[
-              styles.progressFill, 
-              { 
-                width: `${((currentQuestion + 1) / questions.length) * 100}%`,
-                backgroundColor: theme.colors.primary 
-              }
-            ]} 
-          />
-        </View>
-        <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
-          {currentQuestion + 1}/{questions.length}
-        </Text>
+        
+        <ScrollView style={styles.questionScroll}>
+          <Text style={styles.questionText}>{item.question}</Text>
+          
+          {/* Multiple Choice Questions */}
+          {item.type === 'multiple_choice' && (
+            <View style={styles.optionsContainer}>
+              {item.options.map((option, optionIndex) => (
+                <TouchableOpacity
+                  key={optionIndex}
+                  style={[
+                    styles.optionButton,
+                    userAnswer?.answer === option && styles.selectedOption,
+                    isSubmittedQuestion && option === item.correctAnswer && styles.correctOptionHighlight
+                  ]}
+                  onPress={() => handleAnswer(option)}
+                  disabled={userAnswer?.submitted}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    userAnswer?.answer === option && styles.selectedOptionText,
+                    isSubmittedQuestion && option === item.correctAnswer && styles.correctOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          
+          {/* True/False Questions */}
+          {item.type === 'true_false' && (
+            <View style={styles.trueFalseContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.trueFalseButton,
+                  userAnswer?.answer === true && styles.selectedOption,
+                  isSubmittedQuestion && item.correctAnswer === true && styles.correctOptionHighlight
+                ]}
+                onPress={() => handleAnswer(true)}
+                disabled={userAnswer?.submitted}
+              >
+                <Text style={[
+                  styles.trueFalseText,
+                  userAnswer?.answer === true && styles.selectedOptionText,
+                  isSubmittedQuestion && item.correctAnswer === true && styles.correctOptionText
+                ]}>
+                  True
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.trueFalseButton,
+                  userAnswer?.answer === false && styles.selectedOption,
+                  isSubmittedQuestion && item.correctAnswer === false && styles.correctOptionHighlight
+                ]}
+                onPress={() => handleAnswer(false)}
+                disabled={userAnswer?.submitted}
+              >
+                <Text style={[
+                  styles.trueFalseText,
+                  userAnswer?.answer === false && styles.selectedOptionText,
+                  isSubmittedQuestion && item.correctAnswer === false && styles.correctOptionText
+                ]}>
+                  False
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {/* Written Answer Questions */}
+          {item.type === 'written' && (
+            <View style={styles.writtenContainer}>
+              <TextInput
+                style={styles.writtenInput}
+                placeholder="Type your answer..."
+                multiline
+                value={isActive ? textInput : userAnswer?.answer || ''}
+                onChangeText={isActive ? setTextInput : () => {}}
+                editable={isActive && !userAnswer?.submitted}
+              />
+              {isActive && !userAnswer?.submitted && (
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleTextInputSubmit}
+                >
+                  <Text style={styles.submitButtonText}>Submit</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          
+          {/* Show explanation after answering */}
+          {isSubmittedQuestion && showAnswerExplanation && (
+            <View style={styles.explanationContainer}>
+              <Text style={styles.explanationTitle}>Explanation</Text>
+              <Text style={styles.explanationText}>{item.explanation}</Text>
+            </View>
+          )}
+          
+          {isSubmittedQuestion && (
+            <TouchableOpacity
+              style={styles.explanationToggle}
+              onPress={() => setShowAnswerExplanation(!showAnswerExplanation)}
+            >
+              <Text style={styles.explanationToggleText}>
+                {showAnswerExplanation ? 'Hide Explanation' : 'Show Explanation'}
+              </Text>
+              <Ionicons
+                name={showAnswerExplanation ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+  
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.title}>{assignment.title || assignment.subspace_name}</Text>
       </View>
       
-      <View style={[styles.questionContainer, { backgroundColor: theme.colors.card }]}>
-        <Text style={[styles.questionText, { color: theme.colors.text }]}>{question.question}</Text>
-      </View>
+      <FlatList
+        ref={flatListRef}
+        data={assignment.questions}
+        renderItem={renderQuestion}
+        keyExtractor={(_, index) => `question-${index}`}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => {
+          const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+          setCurrentQuestionIndex(newIndex);
+        }}
+        initialScrollIndex={currentQuestionIndex}
+        getItemLayout={(_, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
+      />
       
-      {isCurrentQuestionTyped ? (
-        <View style={styles.typedAnswerContainer}>
-          <Text style={[styles.typedLabel, { color: theme.colors.text }]}>Type your answer:</Text>
-          <TextInput
-            style={[
-              styles.typedInput, 
-              { 
-                backgroundColor: theme.colors.card,
-                borderColor: theme.colors.border,
-                color: theme.colors.text 
-              }
-            ]}
-            value={typedAnswer}
-            onChangeText={setTypedAnswer}
-            multiline
-            placeholder="Enter your answer here..."
-            placeholderTextColor={theme.colors.textSecondary}
-          />
-        </View>
-      ) : (
-        <View style={styles.optionsContainer}>
-          {question.options.map((option, index) => (
+      <View style={styles.navigationButtons}>
+        <TouchableOpacity
+          style={[styles.navButton, currentQuestionIndex === 0 && styles.disabledButton]}
+          onPress={goToPreviousQuestion}
+          disabled={currentQuestionIndex === 0}
+        >
+          <Ionicons name="chevron-back" size={24} color={currentQuestionIndex === 0 ? "#AAAAAA" : "#000000"} />
+          <Text style={[styles.navButtonText, currentQuestionIndex === 0 && styles.disabledText]}>Previous</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.progressContainer}>
+          {assignment.questions.map((_, index) => (
             <TouchableOpacity
               key={index}
               style={[
-                styles.optionButton,
-                { 
-                  backgroundColor: theme.colors.card,
-                  borderColor: theme.colors.border 
-                },
-                selectedAnswer === option && { 
-                  backgroundColor: theme.colors.primary,
-                  borderColor: theme.colors.primary 
-                }
+                styles.progressDot,
+                index === currentQuestionIndex && styles.activeDot,
+                userAnswers[index]?.submitted && styles.answeredDot
               ]}
-              onPress={() => handleSelectAnswer(option)}
-            >
-              <Text style={[
-                styles.optionText,
-                { color: theme.colors.text },
-                selectedAnswer === option && styles.selectedOptionText
-              ]}>
-                {option}
-              </Text>
-            </TouchableOpacity>
+              onPress={() => {
+                setCurrentQuestionIndex(index);
+                flatListRef.current?.scrollToIndex({ index, animated: true });
+              }}
+            />
           ))}
         </View>
-      )}
+        
+        <TouchableOpacity
+          style={[styles.navButton, currentQuestionIndex === assignment.questions.length - 1 && styles.disabledButton]}
+          onPress={goToNextQuestion}
+          disabled={currentQuestionIndex === assignment.questions.length - 1}
+        >
+          <Text style={[styles.navButtonText, currentQuestionIndex === assignment.questions.length - 1 && styles.disabledText]}>Next</Text>
+          <Ionicons name="chevron-forward" size={24} color={currentQuestionIndex === assignment.questions.length - 1 ? "#AAAAAA" : "#000000"} />
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[
-            styles.nextButton,
-            { backgroundColor: theme.colors.primary },
-            (!selectedAnswer && !isCurrentQuestionTyped) && styles.disabledButton,
-            (isCurrentQuestionTyped && !typedAnswer.trim()) && styles.disabledButton
-          ]}
-          onPress={handleNextQuestion}
-          disabled={(!selectedAnswer && !isCurrentQuestionTyped) || (isCurrentQuestionTyped && !typedAnswer.trim())}
+          style={styles.submitAssignmentButton}
+          onPress={handleSubmit}
+          disabled={submitted}
         >
-          <Text style={styles.nextButtonText}>
-            {currentQuestion < questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
-          </Text>
-          <Ionicons name="arrow-forward" size={20} color="white" />
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitAssignmentText}>Submit Assignment</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -433,185 +491,321 @@ const AssignmentQuizScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  timerContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  timerText: {
-    fontSize: 16,
+  backButton: {
+    padding: 8,
+  },
+  title: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 5,
-  },
-  timerWarning: {
-    color: '#F44336',
-  },
-  progressContainer: {
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 10,
-  },
-  progressFill: {
-    height: 8,
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 14,
+    color: '#000000',
+    marginLeft: 16,
   },
   questionContainer: {
-    padding: 20,
-    margin: 15,
-    borderRadius: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
+    flex: 1,
+    padding: 16,
+  },
+  questionScroll: {
+    flex: 1,
+  },
+  questionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  questionNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  questionType: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666666',
   },
   questionText: {
     fontSize: 18,
-    lineHeight: 26,
+    color: '#000000',
+    marginBottom: 24,
   },
   optionsContainer: {
-    padding: 15,
+    marginTop: 16,
   },
   optionButton: {
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    padding: 16,
     borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
   },
   optionText: {
     fontSize: 16,
+    color: '#000000',
+  },
+  selectedOption: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
   },
   selectedOptionText: {
-    color: 'white',
+    color: '#007AFF',
+    fontWeight: '500',
   },
-  typedAnswerContainer: {
-    padding: 15,
+  correctOptionHighlight: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#4CAF50',
   },
-  typedLabel: {
+  correctOptionText: {
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  trueFalseContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 24,
+  },
+  trueFalseButton: {
+    width: '45%',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  trueFalseText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  writtenContainer: {
+    marginTop: 16,
+  },
+  writtenInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 16,
+    minHeight: 120,
+    backgroundColor: '#FFFFFF',
+    textAlignVertical: 'top',
+    fontSize: 16,
+    color: '#000000',
+  },
+  explanationContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFB74D',
+  },
+  explanationTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#000000',
+    marginBottom: 8,
   },
-  typedInput: {
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    minHeight: 120,
-    textAlignVertical: 'top',
+  explanationText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
   },
-  footer: {
-    padding: 15,
-    marginTop: 'auto',
-  },
-  nextButton: {
-    padding: 15,
-    borderRadius: 10,
+  explanationToggle: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 16,
+    padding: 8,
+  },
+  explanationToggleText: {
+    color: colors.primary,
+    marginRight: 4,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  navigationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  navButton: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  disabledButton: {
-    backgroundColor: '#CCCCCC',
-  },
-  nextButtonText: {
-    color: 'white',
+  navButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 5,
+    color: '#000000',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#AAAAAA',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  progressDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#007AFF',
+    width: 12,
+    height: 12,
+  },
+  answeredDot: {
+    backgroundColor: '#4CAF50',
+  },
+  footer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  submitAssignmentButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitAssignmentText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
   },
   resultsContainer: {
     flex: 1,
-    padding: 15,
+    padding: 16,
   },
-  resultsTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  scoreContainer: {
+  scoreCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     padding: 20,
-    borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  scoreText: {
+  scoreTitle: {
     fontSize: 18,
+    color: '#666666',
+    marginBottom: 8,
+  },
+  scoreValue: {
+    fontSize: 48,
     fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 8,
   },
-  feedbackContainer: {
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  feedbackTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  feedbackText: {
+  scoreFeedback: {
     fontSize: 16,
-    lineHeight: 24,
+    fontWeight: '500',
   },
-  answersTitle: {
-    fontSize: 18,
+  resultsHeading: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#000000',
+    marginBottom: 16,
   },
   resultItem: {
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   resultQuestion: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 12,
+  },
+  resultAnswerContainer: {
     marginBottom: 8,
   },
-  resultAnswer: {
-    fontSize: 15,
-    marginBottom: 5,
+  resultLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666666',
+    marginBottom: 4,
   },
-  correctAnswerText: {
-    fontSize: 15,
+  resultAnswer: {
+    fontSize: 16,
+    color: '#000000',
+    padding: 8,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 4,
   },
   correctAnswer: {
     color: '#4CAF50',
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
   wrongAnswer: {
     color: '#F44336',
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
-  answerFeedback: {
+  resultExplanationContainer: {
+    marginTop: 12,
+  },
+  resultExplanation: {
     fontSize: 14,
-    fontStyle: 'italic',
-    marginTop: 8,
-    padding: 8,
-    borderRadius: 5,
+    color: '#666666',
+    lineHeight: 20,
   },
-  doneButton: {
-    padding: 15,
-    borderRadius: 10,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 30,
   },
-  doneButtonText: {
-    color: 'white',
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#FF0000',
+    marginBottom: 16,
+  },
+  backButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#000000',
   },
 });
 
