@@ -1,90 +1,151 @@
-import React, { forwardRef } from 'react';
-import { View, TextInput, StyleSheet, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../../styles/theme';
+import React, { useState } from 'react';
+import { 
+  View, 
+  TextInput, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity 
+} from 'react-native';
+import { colors, spacing, borderRadius, typography } from '../../styles/theme';
 
-export const Input = forwardRef(({
-  icon,
+/**
+ * Input component with support for labels, errors, and icons
+ *
+ * @param {Object} props Component props
+ * @param {string} [props.label] - Input label text 
+ * @param {string} [props.placeholder] - Input placeholder text
+ * @param {string} [props.value] - Input value
+ * @param {Function} [props.onChangeText] - Function to call when text changes
+ * @param {string} [props.error] - Error message to display
+ * @param {boolean} [props.secureTextEntry] - Whether to hide input text
+ * @param {React.ReactNode} [props.leftIcon] - Icon to display on the left side of input
+ * @param {React.ReactNode} [props.rightIcon] - Icon to display on the right side of input
+ * @param {Function} [props.onRightIconPress] - Function to call when right icon is pressed
+ * @param {Object} [props.style] - Additional styles for the input container
+ * @param {Object} [props.inputStyle] - Additional styles for the TextInput
+ */
+const Input = ({
+  label,
   placeholder,
   value,
   onChangeText,
-  secureTextEntry,
-  keyboardType,
-  autoCapitalize = 'none',
-  returnKeyType,
-  onSubmitEditing,
-  blurOnSubmit,
   error,
+  secureTextEntry,
+  leftIcon,
+  rightIcon,
+  onRightIconPress,
+  style,
+  inputStyle,
   ...props
-}, ref) => {
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    if (props.onFocus) props.onFocus();
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (props.onBlur) props.onBlur();
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      
       <View style={[
         styles.inputContainer,
-        error ? styles.inputContainerError : null
+        isFocused && styles.focused,
+        error && styles.error
       ]}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={20}
-            color={colors.primary}
-            style={styles.icon}
-          />
+        {leftIcon && (
+          <View style={styles.leftIcon}>
+            {leftIcon}
+          </View>
         )}
+        
         <TextInput
-          ref={ref}
-          style={styles.input}
+          style={[
+            styles.input,
+            leftIcon && styles.inputWithLeftIcon,
+            rightIcon && styles.inputWithRightIcon,
+            inputStyle
+          ]}
           placeholder={placeholder}
           placeholderTextColor={colors.textSecondary}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          returnKeyType={returnKeyType}
-          onSubmitEditing={onSubmitEditing}
-          blurOnSubmit={blurOnSubmit}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           {...props}
         />
+        
+        {rightIcon && (
+          <TouchableOpacity 
+            style={styles.rightIcon}
+            onPress={onRightIconPress}
+            disabled={!onRightIconPress}
+          >
+            {rightIcon}
+          </TouchableOpacity>
+        )}
       </View>
-      {error && typeof error === 'string' && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
+      
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
-});
+};
 
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
+  label: {
+    ...typography.label,
+    marginBottom: spacing.xs,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    borderRadius: borderRadius.md,
+    minHeight: 48,
   },
-  inputContainerError: {
+  focused: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  error: {
     borderColor: colors.error,
-  },
-  icon: {
-    paddingHorizontal: spacing.md,
   },
   input: {
     flex: 1,
-    fontSize: 16,
     color: colors.text,
-    paddingVertical: spacing.md,
+    fontSize: 16,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  inputWithLeftIcon: {
+    paddingLeft: spacing.xs,
+  },
+  inputWithRightIcon: {
+    paddingRight: spacing.xs,
+  },
+  leftIcon: {
+    paddingLeft: spacing.md,
+  },
+  rightIcon: {
     paddingRight: spacing.md,
-    paddingLeft: 0,
   },
   errorText: {
     color: colors.error,
-    ...typography.caption,
+    fontSize: 12,
     marginTop: spacing.xs,
-    marginLeft: spacing.sm,
-  },
-}); 
+  }
+});
+
+export default Input; 

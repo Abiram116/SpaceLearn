@@ -5,7 +5,6 @@ import {
   Platform,
   StyleSheet,
   View,
-  ScrollView,
 } from 'react-native';
 import { colors } from '../../styles/theme';
 import { useKeyboardHandler } from '../../hooks/useKeyboardHandler';
@@ -30,17 +29,9 @@ export const KeyboardAwareView = ({
         keyboardVerticalOffset={keyboardVerticalOffset}
         enabled={enabled}
       >
-        <ScrollView
-          contentContainerStyle={[
-            { flexGrow: 1 },
-            contentContainerStyle,
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={[styles.contentContainer, containerStyle]}>
-            {children}
-          </View>
-        </ScrollView>
+        <View style={[styles.contentContainer, containerStyle, contentContainerStyle]}>
+          {children}
+        </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );

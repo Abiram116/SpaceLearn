@@ -11,13 +11,19 @@ import {
   Image,
   Modal,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius } from '../../styles/theme';
 import { userService } from '../../services/userService';
 import Button from '../../components/common/Button';
 import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
-import { Input } from '../../components/common/Input';
+import Input from '../../components/common/Input';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// For checking if device is iPhone X or newer
+const { width, height } = Dimensions.get('window');
+const IS_IPHONE_X_OR_ABOVE = Platform.OS === 'ios' && (height >= 812 || width >= 812);
 
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'male' },
@@ -30,6 +36,7 @@ const EditProfileScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState({
     full_name: user.full_name || '',
     username: user.username || '',
@@ -115,11 +122,14 @@ const EditProfileScreen = ({ route, navigation }) => {
   };
 
   return (
-    <KeyboardAwareView>
+    <KeyboardAwareView style={{ backgroundColor: colors.background }}>
       <StatusBar barStyle="dark-content" />
       <ScrollView 
         style={styles.container}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingTop: insets.top > 0 ? spacing.md : spacing.xl }
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -214,12 +224,11 @@ const EditProfileScreen = ({ route, navigation }) => {
           />
 
           <Button
-            title={loading ? '' : 'Save Changes'}
             onPress={handleUpdateProfile}
             disabled={loading}
             style={styles.submitButton}
           >
-            {loading && <ActivityIndicator color={colors.background} />}
+            {loading ? <ActivityIndicator color={colors.background} /> : 'Save Changes'}
           </Button>
         </View>
 
@@ -270,6 +279,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.lg,
+    paddingBottom: IS_IPHONE_X_OR_ABOVE ? 34 : spacing.xl,
   },
   backButton: {
     padding: 10,
@@ -365,6 +375,8 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: spacing.xl,
+    height: 48,
+    justifyContent: 'center',
   },
 });
 

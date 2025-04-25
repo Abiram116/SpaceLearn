@@ -12,6 +12,7 @@ import {
   Platform,
   TextInput,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, borderRadius, layout } from '../../styles/theme';
@@ -22,6 +23,11 @@ import Button from '../../components/common/Button';
 import AnimatedView from '../../components/common/AnimatedView';
 import { useTheme } from '../../context/ThemeContext';
 import { setGoogleAIApiKey } from '../../services/googleAI';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// For checking if device is iPhone X or newer
+const { width, height } = Dimensions.get('window');
+const IS_IPHONE_X_OR_ABOVE = Platform.OS === 'ios' && (height >= 812 || width >= 812);
 
 const ProfileScreen = ({ navigation }) => {
   const { theme } = useTheme();
@@ -30,6 +36,7 @@ const ProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [apiKey, setApiKey] = useState('');
   const [apiKeySaved, setApiKeySaved] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadUserProfile();
@@ -159,7 +166,13 @@ const ProfileScreen = ({ navigation }) => {
       <StatusBar barStyle="dark-content" />
       
       <AnimatedView animation="fade">
-        <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
+        <View style={[
+          styles.header, 
+          { 
+            backgroundColor: theme.colors.primary,
+            paddingTop: IS_IPHONE_X_OR_ABOVE ? insets.top + spacing.md : spacing.xxl,
+          }
+        ]}>
           <View style={styles.avatarContainer}>
             {user?.avatar_url ? (
               <Image
@@ -278,11 +291,12 @@ const ProfileScreen = ({ navigation }) => {
                 The API key will be stored temporarily for this session only.
               </Text>
               <Button
-                title={apiKeySaved ? "API Key Saved" : "Save API Key"}
                 onPress={handleSaveApiKey}
-                type={apiKeySaved ? "secondary" : "primary"}
+                variant={apiKeySaved ? "secondary" : "primary"}
                 style={styles.apiKeyButton}
-              />
+              >
+                {apiKeySaved ? "API Key Saved" : "Save API Key"}
+              </Button>
               
               <TouchableOpacity
                 style={styles.testApiButton}
@@ -297,11 +311,12 @@ const ProfileScreen = ({ navigation }) => {
 
         <AnimatedView animation="slide" delay={600}>
           <Button
-            title="Sign Out"
             onPress={handleLogout}
             style={styles.signOutButton}
-            type="secondary"
-          />
+            variant="secondary"
+          >
+            Sign Out
+          </Button>
 
           <TouchableOpacity
             style={styles.deleteAccountButton}
@@ -342,7 +357,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? spacing.xxl + layout.statusBarHeight : spacing.xl,
     paddingBottom: spacing.xl,
     backgroundColor: colors.primary,
     borderBottomLeftRadius: borderRadius.xl,
@@ -404,7 +418,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingBottom: Platform.OS === 'ios' ? layout.bottomSpacing : spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? (IS_IPHONE_X_OR_ABOVE ? 34 : spacing.xl) : spacing.xl,
   },
   infoCard: {
     padding: spacing.lg,
@@ -510,6 +524,8 @@ const styles = StyleSheet.create({
   },
   apiKeyButton: {
     marginTop: spacing.sm,
+    height: 48,
+    justifyContent: 'center',
   },
   testApiButton: {
     flexDirection: 'row',
