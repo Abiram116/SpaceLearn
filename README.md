@@ -2,6 +2,10 @@
 
 SpaceLearn is an educational platform designed to help students learn through interactive AI-powered conversations and organized learning spaces. The platform uses Google's Gemini AI to provide intelligent, contextual learning assistance.
 
+
+https://github.com/user-attachments/assets/d0a4f3d9-2b63-4c5d-ac33-b4d163898758
+
+
 ## Current Features
 
 ### Authentication
