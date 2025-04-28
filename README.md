@@ -1,68 +1,67 @@
 # SpaceLearn
 
-SpaceLearn is an educational platform designed to help students learn through interactive AI-powered conversations and organized learning spaces.
+SpaceLearn is an educational platform designed to help students learn through interactive AI-powered conversations and organized learning spaces. The platform uses Google's Gemini AI to provide intelligent, contextual learning assistance.
 
 ## Current Features
 
 ### Authentication
-- User registration with email/password
-- Profile creation with optional details (username, full name, age, gender)
-- Secure login/logout functionality
-- Password reset capability
+- User registration and login system
+- Profile management
+- Secure authentication using Supabase
 
 ### Learning Spaces
-- **Subjects**: Create and manage different subject areas
-- **Subspaces**: Create topic-specific learning spaces within subjects
-- **AI Conversations**: Interactive learning through AI-powered chat in each subspace
+- Subject-based organization
+- Topic-specific subspaces
+- AI-powered learning assistance using Gemini AI
+  - Interactive conversations for learning
   - Code examples with syntax highlighting
   - Step-by-step explanations
-  - Support for multiple programming languages (JavaScript, Python, Rust)
+  - Support for multiple programming languages
   - Mathematical and scientific concept breakdowns
 
-### User Experience
-- Clean, modern UI design
-- Mobile-responsive layout
-- Dark mode support
-- Progress tracking with learning streaks
-- Recent activity tracking
+### Assignments
+- Create and manage assignments
+- Assignment tracking and progress monitoring
+- Quiz-based assignments with results tracking
+- Detailed assignment descriptions and titles
+- Assignment results analysis
 
-## Planned Features
-
-### Notes System (Coming Soon)
-- Create and organize notes within subspaces
-- Rich text editing
-- Code snippet support
-- Image attachments
-- Search and filter capabilities
-
-### Assignments (Coming Soon)
-- Create and track assignments
-- Set due dates and priorities
-- Progress tracking
-- Completion status
-- Assignment analytics
-
-### Future Enhancements
-- Study group collaboration
-- File sharing capabilities
-- Advanced analytics and progress tracking
-- Customizable learning paths
-- Integration with external learning resources
-- Mobile app versions
+### User Interface
+- Modern, responsive design
+- Cross-platform support (iOS, Android)
+- Intuitive navigation
 
 ## Technical Stack
 
-- React Native / Expo
-- Supabase for backend and authentication
-- Google AI (Gemini Pro) for intelligent responses
-- Custom syntax highlighting
-- Real-time data synchronization
+- React Native / Expo for cross-platform development
+- Supabase for backend services and authentication
+- Google Gemini AI for intelligent learning assistance
+- Webpack for web build configuration
+- Context API for state management
+- Modular component architecture
+
+## Project Structure
+
+```
+src/
+├── api/         # API integration and services
+├── components/  # Reusable UI components
+├── config/      # Configuration files
+├── context/     # React Context providers
+├── data/        # Data models and types
+├── hooks/       # Custom React hooks
+├── navigation/  # Navigation configuration
+├── screens/     # Main application screens
+├── services/    # Business logic services
+├── styles/      # Global styles and themes
+└── utils/       # Utility functions
+```
 
 ## Getting Started
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/SpaceLearn.git
+git clone https://github.com/Abiram116/SpaceLearn.git
 ```
 
 2. Install dependencies
@@ -76,16 +75,20 @@ Create a .env file with the following:
 ```
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-EXPO_PUBLIC_ANDROID_CLIENT_ID=your_android_client_id
-EXPO_PUBLIC_IOS_CLIENT_ID=your_ios_client_id
-EXPO_PUBLIC_EXPO_CLIENT_ID=your_expo_client_id
-EXPO_PUBLIC_GOOGLE_AI_API_KEY=your_google_ai_api_key
+EXPO_PUBLIC_GOOGLE_AI_API_KEY=your_gemini_api_key
 ```
 
 4. Run the development server
 ```bash
-npm start
+npx expo start
 ```
+
+## Development
+
+- The project uses Expo for cross-platform development
+- Web support is configured through webpack(which is not working currently)
+- Supabase is used for backend services
+- The application follows a modular architecture for better maintainability
 
 ## Contributing
 
@@ -97,4 +100,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-For any queries or support, please reach out to [your contact information]. 
+For any queries or support, please reach out to sreeabirammandava@gmail.com. 

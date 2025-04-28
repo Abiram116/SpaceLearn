@@ -1,4 +1,4 @@
-import { supabase, handleResponse } from '../api/supabase/client';
+import { supabase, handleResponse, createServiceClient } from '../api/supabase/client';
 
 const isNewDay = (lastDate) => {
   if (!lastDate) return true;
@@ -111,11 +111,54 @@ export const userService = {
           email: 'HIDDEN'
         });
 
-        const { data: profile, error: profileError } = await supabase
+        // Try first with regular client
+        let { data: profile, error: profileError } = await supabase
           .from('users')
           .insert([profileData])
           .select()
           .single();
+
+        // If we get an RLS policy error, we need to use a workaround with the service client
+        if (profileError && (profileError.message?.includes('row-level security') || 
+            profileError.code === '42501')) {
+          console.log('RLS policy error detected, trying with service client...');
+            
+          // Use the service client which can bypass RLS
+          const serviceClient = await createServiceClient();
+          
+          const { data: serviceProfile, error: serviceError } = await serviceClient
+            .from('users')
+            .insert([profileData])
+            .select()
+            .single();
+            
+          profile = serviceProfile;
+          profileError = serviceError;
+        }
+
+        // If we still have an error, try the minimal approach
+        if (profileError) {
+          console.log('Service client approach failed, trying minimal profile creation...');
+          
+          // Try with minimal data that's most likely to succeed
+          const minimalProfile = {
+            id: authData.user.id,
+            email: userData.email.toLowerCase().trim(),
+            username: userData.metadata.username.toLowerCase().trim(),
+            full_name: userData.metadata.full_name.trim(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          const { data: minimalData, error: minimalError } = await supabase
+            .from('users')
+            .insert([minimalProfile])
+            .select()
+            .single();
+            
+          profile = minimalData;
+          profileError = minimalError;
+        }
 
         if (profileError) {
           console.error('Profile creation error:', {

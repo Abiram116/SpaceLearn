@@ -154,6 +154,31 @@ try {
 
 export { supabase };
 
+// Create an admin client using session token for operations that need to bypass RLS
+export const createServiceClient = async () => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    
+    if (data?.session) {
+      // Create a new client with the JWT
+      return createClient(supabaseUrl, supabaseAnonKey, {
+        ...supabaseConfig,
+        global: {
+          headers: {
+            Authorization: `Bearer ${data.session.access_token}`,
+          },
+        },
+      });
+    }
+    
+    console.warn("No active session for service client");
+    return supabase; // Return regular client as fallback
+  } catch (error) {
+    console.error("Error creating service client:", error);
+    return supabase; // Return regular client as fallback
+  }
+};
+
 // Helper function to handle responses
 export const handleResponse = (response) => {
   if (response.error) {

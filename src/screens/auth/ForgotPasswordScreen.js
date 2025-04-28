@@ -1,17 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, layout, typography } from '../../styles/theme';
 import Button from '../../components/common/Button';
 import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
-import { Input } from '../../components/common/Input';
+import Input from '../../components/common/Input';
 import { userService } from '../../services/userService';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const emailRef = useRef(null);
 
   const handleSubmit = async () => {
     if (!email) {
@@ -22,8 +21,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setError('');
 
     try {
-      await userService.forgotPassword(email);
-      navigation.navigate('ResetPassword', { email });
+      await userService.resetPassword(email);
+      Alert.alert(
+        "Password Reset Email Sent",
+        "Check your email for instructions to reset your password.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
     } catch (err) {
       setError(err.message || 'Failed to process request');
     } finally {
@@ -46,7 +49,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
           {error && <Text style={styles.errorText}>{error}</Text>}
           
           <Input
-            ref={emailRef}
             icon="mail"
             placeholder="Email"
             value={email}
@@ -59,18 +61,22 @@ const ForgotPasswordScreen = ({ navigation }) => {
           />
 
           <Button
-            title="Reset Password"
             onPress={handleSubmit}
-            isLoading={isLoading}
+            disabled={isLoading}
             style={styles.submitButton}
-          />
+            fullWidth={true}
+          >
+            {isLoading ? <ActivityIndicator color={colors.background} size="small" /> : "Reset Password"}
+          </Button>
 
           <Button
-            title="Back to Sign In"
             onPress={() => navigation.goBack()}
             variant="secondary"
             style={styles.backButton}
-          />
+            fullWidth={true}
+          >
+            Back to Sign In
+          </Button>
         </View>
       </View>
     </KeyboardAwareView>
@@ -81,11 +87,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: spacing.xl,
-    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.xl : spacing.xl,
+    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + 100 : spacing.xl,
     backgroundColor: colors.background,
   },
   header: {
     alignItems: 'center',
+    marginTop: 40,
     marginBottom: spacing.xl,
   },
   title: {

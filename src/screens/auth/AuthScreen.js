@@ -20,7 +20,7 @@ import { colors, spacing, typography, shadows, borderRadius, layout } from '../.
 import { userService } from '../../services/userService';
 import Button from '../../components/common/Button';
 import { KeyboardAwareView } from '../../components/common/KeyboardAwareView';
-import { Input } from '../../components/common/Input';
+import Input from '../../components/common/Input';
 import { fadeIn, scaleIn, slideUp, buttonPop, nativeAnimations } from '../../utils/animations';
 import gsap from 'gsap';
 
@@ -75,16 +75,12 @@ const AuthScreen = ({ navigation }) => {
   const [error, setError] = useState('');
   const [genderInputPosition, setGenderInputPosition] = useState(0);
 
-  const emailRef = useRef(null);
-  const passwordRef = useRef(null);
-  const confirmPasswordRef = useRef(null);
-  const usernameRef = useRef(null);
-  const ageRef = useRef(null);
-  const genderInputRef = useRef(null);
+  // Remove input component refs
   const containerRef = useRef(null);
   const headerRef = useRef(null);
   const formRef = useRef(null);
   const buttonRef = useRef(null);
+  const genderInputRef = useRef(null);
 
   // Add animated values for native platforms
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -340,10 +336,15 @@ const AuthScreen = ({ navigation }) => {
   };
 
   const handleGenderPress = () => {
-    genderInputRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setGenderInputPosition(pageY + height);
+    if (genderInputRef.current) {
+      genderInputRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setGenderInputPosition(pageY + height);
+        setShowGenderPicker(true);
+      });
+    } else {
+      // If ref isn't available, just show the picker at a reasonable position
       setShowGenderPicker(true);
-    });
+    }
   };
 
   const renderGenderPicker = () => (
@@ -421,19 +422,16 @@ const AuthScreen = ({ navigation }) => {
               {!isLogin && (
                 <>
                   <Input
-                    ref={emailRef}
                     icon="person"
                     placeholder="Full Name"
                     value={formData.fullName}
                     onChangeText={(text) => setFormData({ ...formData, fullName: text })}
                     autoCapitalize="words"
                     returnKeyType="next"
-                    onSubmitEditing={() => usernameRef?.current?.focus()}
                     blurOnSubmit={false}
                   />
 
                   <Input
-                    ref={usernameRef}
                     icon="at"
                     placeholder="Username"
                     value={formData.username}
@@ -457,6 +455,7 @@ const AuthScreen = ({ navigation }) => {
                         }
                       ]}
                       onPress={() => setShowGenderPicker(!showGenderPicker)}
+                      ref={genderInputRef}
                     >
                       <Ionicons name="male-female" size={20} color={colors.textSecondary} />
                       <Text
@@ -505,21 +504,18 @@ const AuthScreen = ({ navigation }) => {
                   </View>
 
                   <Input
-                    ref={ageRef}
                     icon="calendar"
                     placeholder="Age"
                     value={formData.age}
                     onChangeText={(text) => setFormData({ ...formData, age: text })}
                     keyboardType="number-pad"
                     returnKeyType="next"
-                    onSubmitEditing={() => emailRef?.current?.focus()}
                     blurOnSubmit={false}
                   />
                 </>
               )}
 
               <Input
-                ref={emailRef}
                 icon="mail"
                 placeholder="Email"
                 value={formData.email}
@@ -527,27 +523,24 @@ const AuthScreen = ({ navigation }) => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
-                onSubmitEditing={() => passwordRef?.current?.focus()}
                 blurOnSubmit={false}
                 error={error}
               />
 
               <Input
-                ref={passwordRef}
                 icon="lock-closed"
                 placeholder="Password"
                 value={formData.password}
                 onChangeText={(text) => setFormData({ ...formData, password: text })}
                 secureTextEntry
                 returnKeyType={isLogin ? "go" : "next"}
-                onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
+                onSubmitEditing={isLogin ? handleSubmit : null}
                 blurOnSubmit={isLogin}
                 error={error}
               />
 
               {!isLogin && (
                 <Input
-                  ref={confirmPasswordRef}
                   icon="lock-closed"
                   placeholder="Confirm Password"
                   value={formData.confirmPassword}
@@ -661,19 +654,16 @@ const AuthScreen = ({ navigation }) => {
                 {!isLogin && (
                   <>
                     <Input
-                      ref={emailRef}
                       icon="person"
                       placeholder="Full Name"
                       value={formData.fullName}
                       onChangeText={(text) => setFormData({ ...formData, fullName: text })}
                       autoCapitalize="words"
                       returnKeyType="next"
-                      onSubmitEditing={() => usernameRef?.current?.focus()}
                       blurOnSubmit={false}
                     />
 
                     <Input
-                      ref={usernameRef}
                       icon="at"
                       placeholder="Username"
                       value={formData.username}
@@ -697,6 +687,7 @@ const AuthScreen = ({ navigation }) => {
                           }
                         ]}
                         onPress={() => setShowGenderPicker(!showGenderPicker)}
+                        ref={genderInputRef}
                       >
                         <Ionicons name="male-female" size={20} color={colors.textSecondary} />
                         <Text
@@ -745,21 +736,18 @@ const AuthScreen = ({ navigation }) => {
                     </View>
 
                     <Input
-                      ref={ageRef}
                       icon="calendar"
                       placeholder="Age"
                       value={formData.age}
                       onChangeText={(text) => setFormData({ ...formData, age: text })}
                       keyboardType="number-pad"
                       returnKeyType="next"
-                      onSubmitEditing={() => emailRef?.current?.focus()}
                       blurOnSubmit={false}
                     />
                   </>
                 )}
 
                 <Input
-                  ref={emailRef}
                   icon="mail"
                   placeholder="Email"
                   value={formData.email}
@@ -767,27 +755,24 @@ const AuthScreen = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   returnKeyType="next"
-                  onSubmitEditing={() => passwordRef?.current?.focus()}
                   blurOnSubmit={false}
                   error={error}
                 />
 
                 <Input
-                  ref={passwordRef}
                   icon="lock-closed"
                   placeholder="Password"
                   value={formData.password}
                   onChangeText={(text) => setFormData({ ...formData, password: text })}
                   secureTextEntry
                   returnKeyType={isLogin ? "go" : "next"}
-                  onSubmitEditing={isLogin ? handleSubmit : () => confirmPasswordRef?.current?.focus()}
+                  onSubmitEditing={isLogin ? handleSubmit : null}
                   blurOnSubmit={isLogin}
                   error={error}
                 />
 
                 {!isLogin && (
                   <Input
-                    ref={confirmPasswordRef}
                     icon="lock-closed"
                     placeholder="Confirm Password"
                     value={formData.confirmPassword}
@@ -802,12 +787,14 @@ const AuthScreen = ({ navigation }) => {
 
               <View style={styles.buttonSection}>
                 <Button
-                  title={loading ? '' : (isLogin ? 'Sign In' : 'Sign Up')}
                   onPress={handleSubmit}
                   disabled={loading}
                   style={styles.submitButton}
+                  fullWidth={true}
+                  size="large"
                 >
-                  {loading && <ActivityIndicator color={colors.background} />}
+                  {loading ? <ActivityIndicator color={colors.background} /> : 
+                   isLogin ? 'Sign In' : 'Sign Up'}
                 </Button>
 
                 <TouchableOpacity
@@ -843,15 +830,15 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.sm,
-    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + spacing.sm : spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingTop: Platform.OS === 'ios' ? layout.statusBarHeight + 100 : spacing.sm,
+    paddingBottom: spacing.xl * 2,
     minHeight: '100%',
     justifyContent: 'flex-start',
   },
   header: {
     alignItems: 'center',
     position: 'relative',
-    top: 0,
+    marginTop: 40,
   },
   title: {
     ...typography.h1,
@@ -873,6 +860,9 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: spacing.md,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   toggleButton: {
     marginTop: spacing.lg,
